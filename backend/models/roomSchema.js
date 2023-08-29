@@ -1,4 +1,4 @@
-const { Schema, model } = require('mongoose')
+const { Schema, model, isObjectIdOrHexString } = require('mongoose')
 
 const roomSchema = new Schema({
   id: {
@@ -27,7 +27,10 @@ const roomSchema = new Schema({
   ],
   currentCategory: {
     type: String
-  }
+  },
+  words: [
+    Object
+  ]
 })
 
 module.exports = model('room', roomSchema)

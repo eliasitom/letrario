@@ -48,7 +48,7 @@ app.post("/api/get_room", async (req, res) => {
 app.post("/api/send_category", (req, res) => {
   const { category, roomId, player } = req.body;
 
-  const newCategory = { category, origin: player };
+  const newCategory = { category, origin: player, finished: false };
 
   Room.findOneAndUpdate(
     { id: roomId },
@@ -121,7 +121,7 @@ io.on("connection", (socket) => {
   socket.on("gameStarted", (roomId) => {
     socket.to(roomId).emit("gameStarted");
 
-    let timer = 10;
+    let timer = 5;
 
     const number = setInterval(() => {
       io.to(roomId).emit("timer", timer);
@@ -139,51 +139,52 @@ io.on("connection", (socket) => {
       const room = await Room.findOne({ id: roomId });
 
       room.currentCategory = room.categories[0].category;
-      room.categories.shift();
 
-      if (room.turnOf) {
-        const newTurn = room.players.indexOf(turnOf) + 1;
+      // if (room.turnOf) {
+      //   console.log('if')
 
-        const newTurnOf = room.players[newTurn];
+      //   const newTurn = room.players.indexOf(turnOf) + 1;
 
-        room.turnOf = newTurnOf;
-        await room.save();
+      //   const newTurnOf = room.players[newTurn];
 
-        //Timer
-        let timer = 5;
+      //   room.turnOf = newTurnOf;
+      //   await room.save();
 
-        const number = setInterval(() => {
-          io.to(roomId).emit("categoriesReadyTimer", {timer_: timer, roomId});
-          timer--;
+      //   //Timer
+      //   let timer = 3;
 
-          if (timer == -1) {
-            io.to(roomId).emit("allCategoriesReady", {
-              roomId,
-              initialPlayer: newTurnof,
-            });
-            clearInterval(number);
-          }
-        }, 1000);
-      } else {
-        room.turnOf = room.players[0];
-        room.save();
+      //   const number = setInterval(() => {
+      //     io.to(roomId).emit("categoriesReadyTimer", { timer_: timer, roomId });
+      //     timer--;
 
-        //Timer
-        let timer = 5;
+      //     if (timer == -1) {
+      //       io.to(roomId).emit("allCategoriesReady", {
+      //         roomId,
+      //         initialPlayer: newTurnof,
+      //       });
+      //       clearInterval(number);
+      //     }
+      //   }, 1000);
+      // } else {
+      console.log("else");
+      room.turnOf = room.players[0];
+      room.save();
 
-        const number = setInterval(() => {
-          io.to(roomId).emit("categoriesReadyTimer", {timer_: timer, roomId});
-          timer--;
+      //Timer
+      let timer = 3;
 
-          if (timer == -1) {
-            io.to(roomId).emit("allCategoriesReady", {
-              roomId,
-              initialPlayer: room.players[0],
-            });
-            clearInterval(number);
-          }
-        }, 1000);
-      }
+      const number = setInterval(() => {
+        io.to(roomId).emit("categoriesReadyTimer", { timer_: timer, roomId });
+        timer--;
+
+        if (timer == -1) {
+          io.to(roomId).emit("allCategoriesReady", {
+            roomId,
+            initialPlayer: room.players[0],
+          });
+          clearInterval(number);
+        }
+      }, 1000);
     } catch (error) {
       console.log(error);
     }
@@ -191,6 +192,51 @@ io.on("connection", (socket) => {
 
   socket.on("playerWriting", (data) => {
     io.to(data.roomId).emit("playerWriting", data.myResponse);
+  });
+
+  socket.on("letterSelected", async (data) => {
+    await Room.findOneAndUpdate(
+      { id: data.roomId },
+      { $push: { lettersNotAvailable: data.letter } }
+    );
+
+    io.to(data.roomId).emit("letterSelected", data.letter);
+  });
+
+  socket.on("startWritingTimer", (roomId) => {
+    let timer = 15;
+
+    const number = setInterval(() => {
+      io.to(roomId).emit("writingTimer", { timer_: timer, roomId });
+      timer--;
+
+      if (timer == -1) {
+        clearInterval(number);
+      }
+    }, 1000);
+  });
+
+  socket.on("submitWord", async (data) => {
+    try {
+      const { roomId, response } = data;
+      let room = await Room.findOne({ id: roomId });
+
+      await Room.findOneAndUpdate(
+        { id: roomId },
+        { $push: { words: response } }
+      );
+
+      const newTurn = room.players.indexOf(response.origin) + 1;
+
+      const newTurnOf = room.players[newTurn];
+
+      room.turnOf = newTurnOf;
+      await room.save();
+
+      io.to(roomId).emit("nextPlayer");
+    } catch (error) {
+      console.log(error);
+    }
   });
 });
 

@@ -125,6 +125,10 @@ const HomePanel = () => {
         getRoom(roomId);
       }
     });
+
+    socket.on("nextTurn", () => {
+      getRoom(roomData.id)
+    })
   }, []);
 
   return (
@@ -186,10 +190,10 @@ const HomePanel = () => {
           ) : categorySubmited ? (
             <PlayablePanel
               nickname={nickname}
-              timer={timer}
               roomData={roomData}
               socket={socket}
               waitingPlayersC={waitingPlayersC}
+              getRoom={getRoom}
             />
           ) : undefined}
 
