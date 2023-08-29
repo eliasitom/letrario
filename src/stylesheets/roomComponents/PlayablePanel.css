@@ -1,0 +1,78 @@
+
+.letters-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+}
+.letter {
+    width: 30px;
+    height: 30px;
+    margin: 5px;
+
+    background-color: rgb(255, 255, 255);
+    border-radius: 50px;
+    border: solid black 1px;
+
+    font-weight: bold;
+    text-transform: uppercase;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    cursor: pointer;
+}
+.letter:hover {
+    background-color: rgb(218, 218, 218);
+}
+
+.letters-container form {
+    height: 60px;
+    width: 100%;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: row;
+}
+
+.letters-container input {
+    border: solid black 1px;
+    border-radius: 20px;
+
+    width: 30%;
+    height: 30px;
+    padding: 0 10px 0 10px;
+}
+.letters-container button {
+    width: 80px;
+    height: 30px;
+    margin-left: 10px;
+
+    border: solid black 1px;
+    border-radius: 20px;
+}
+.letters-container form p {
+    width: 30px;
+    height: 30px;
+    margin-right: 10px;
+
+    border: solid black 1px;
+    border-radius: 50px;
+    background-color: white;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.player-response-div {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+}
+.player-response-div p, .player-response-div h3 {
+    margin: 0;
+}
