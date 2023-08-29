@@ -4,6 +4,9 @@ import { v4 as uuidv4 } from "uuid";
 import { useEffect, useState } from "react";
 
 import io from "socket.io-client";
+import CategoriesPanel from "./roomComponents/CategoriesPanel";
+import PlayablePanel from "./roomComponents/PlayablePanel";
+import GameTimer from "./roomComponents/GameTimer";
 const socket = io("http://localhost:8000");
 
 const HomePanel = () => {
@@ -15,6 +18,11 @@ const HomePanel = () => {
   const [guestPassword, setGuestPassword] = useState("");
 
   const [roomData, setRoomData] = useState(null);
+  const [timer, setTimer] = useState(0);
+  const [categoriesPanel, setCategoriesPanel] = useState(false);
+  const [categorySubmited, setCategorySubmited] = useState(false);
+  const [waitingPlayersC, setWaitingPlayersC] = useState(true); //Esperando categorias de jugadores...
+  const [categoriesReadyT, setCategoriesReadyT] = useState(0); //Categorias listas temporizador...
 
   const createRoom = (e) => {
     e.preventDefault();
@@ -49,12 +57,15 @@ const HomePanel = () => {
 
   const leaveRoom = () => {
     setRoomData(null);
+    setCategoriesPanel(false);
+    setCategorySubmited(false);
+    setWaitingPlayersC(true);
     console.log("leave");
     socket.emit("leaveRoom", { id: roomData.id, player: nickname });
   };
 
   const getRoom = (roomId_) => {
-    fetch("http://localhost:8000/get_room", {
+    fetch("http://localhost:8000/api/get_room", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id: roomId_ }),
@@ -62,10 +73,6 @@ const HomePanel = () => {
       .then((response) => response.json())
       .then((res) => {
         console.log(res);
-        console.log(nickname);
-
-        /* ELIAS EL PROBLEMA ESTÁ ACAAAAAA
-        POR ALGUNA RAZÓN EL nickname NO LO LEE, CONSOLE.LOG(nickname) NO IMPRIME NADAA */
 
         if (!res.players.includes(nickname)) {
           setRoomData(res);
@@ -74,10 +81,9 @@ const HomePanel = () => {
       .catch((err) => console.log(err));
   };
 
-
   const startGame = () => {
-    socket.emit('gameStarted', (roomData.id))
-  }
+    socket.emit("gameStarted", roomData.id);
+  };
 
   useEffect(() => {
     socket.on("roomUpdated", (roomId_) => {
@@ -90,9 +96,35 @@ const HomePanel = () => {
       setRoomData(null);
     });
 
-    socket.on("gameStarted", ()=> {
-      console.log('El juego ha comenzado!')
-    })
+    socket.on("gameStarted", () => {
+      console.log("El juego ha comenzado!");
+    });
+
+    socket.on("timer", (timer_) => {
+      setTimer(timer_);
+
+      if (timer_ === 1) {
+        setCategoriesPanel(true);
+      }
+    });
+
+    socket.on("allCategoriesReady", (data) => {
+      getRoom(data.roomId);
+      setWaitingPlayersC(false);
+      console.log(
+        `all categories ready! The initial player is ${data.initialPlayer}`
+      );
+    });
+
+    socket.on("categoriesReadyTimer", (data) => {
+      const {roomId, timer_} = data;
+
+      setCategoriesReadyT(timer_);
+
+      if(timer_ === 0) {
+        getRoom(roomId);
+      }
+    });
   }, []);
 
   return (
@@ -134,23 +166,54 @@ const HomePanel = () => {
           </form>
         </div>
       ) : (
-        <div>
-          <h1>Estas en una sala</h1>
-          <h5>{roomData.id}</h5>
-          <ul>
-            {roomData.players.map((player) => (
-              <li key={player}>{player}</li>
-            ))}
-          </ul>
-          {
-            roomData.admin === nickname ? 
+        <div className="home-room">
+          <h1 className="home-room-title">¡letrario!</h1>
+          <h5 className="home-room-id">{roomData.id}</h5>
+          {timer > 1 ? (
+            <GameTimer timer={timer} type={"startGame"} />
+          ) : categoriesPanel ? (
+            <CategoriesPanel
+              roomId={roomData.id}
+              nickname={nickname}
+              socket={socket}
+              categorySubmited={() => {
+                setCategorySubmited(true);
+                setCategoriesPanel(false);
+              }}
+            />
+          ) : categoriesReadyT > 0 ? (
+            <GameTimer type="categoriesReady" timer={categoriesReadyT} />
+          ) : categorySubmited ? (
+            <PlayablePanel
+              nickname={nickname}
+              timer={timer}
+              roomData={roomData}
+              socket={socket}
+              waitingPlayersC={waitingPlayersC}
+            />
+          ) : undefined}
+
+          {roomData.admin === nickname ? (
             <button onClick={startGame}>start game</button>
-            : undefined
-          }
+          ) : undefined}
           <button onClick={leaveRoom}>Salir</button>
         </div>
       )}
-      <button onClick={() => socket.emit("sd")}>show socket data</button>
+      <div className="room-players-list">
+        {roomData
+          ? roomData.players.map((player) => (
+              <p
+                className={roomData.turnOf === player ? "you-turn" : ""}
+                key={player}
+              >
+                {player}
+              </p>
+            ))
+          : undefined}
+      </div>
+      <button style={{ marginTop: "20px" }} onClick={() => socket.emit("sd")}>
+        show socket data
+      </button>
     </div>
   );
 };

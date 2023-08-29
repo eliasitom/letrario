@@ -13,15 +13,21 @@ const roomSchema = new Schema({
   players: [
     String
   ],
+  turnOf: {
+    type: String
+  },
   password: {
     type: String
   },
   lettersNotAvailable: [
     String
   ],
-  answers: [
+  categories: [
     Object
-  ]
+  ],
+  currentCategory: {
+    type: String
+  }
 })
 
 module.exports = model('room', roomSchema)

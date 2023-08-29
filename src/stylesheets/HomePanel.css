@@ -17,3 +17,57 @@ form {
     align-items: center;
     flex-direction: column;
 }
+
+
+
+/* ROOM */
+
+.home-room {
+    background-color: gray;
+    border-radius: 20px;
+
+    width: 90%;
+    height: 400px;
+
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+}
+
+.home-room-title {
+    margin-bottom: 0;
+}
+.home-room-id {
+    margin-top: 0;
+}
+.room {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: row;
+    
+    height: 100%;
+}
+
+/* PLAYERS LIST */
+
+.room-players-list {
+    background-color: rgb(97, 97, 97);
+
+    height: 100%;
+    width: 13%;
+    margin-top: 40px;
+
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+
+    border-radius: 20px;
+}
+.room-players-list p {
+    font-weight: bold;
+}
+
+.you-turn {
+    color: white;
+}

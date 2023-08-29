@@ -28,13 +28,13 @@ function createRoom(id, password, admin) {
     id,
     password,
     admin,
-    players: [admin, ],
+    players: [admin],
   }).save();
 }
 
 //End points
 
-app.post("/get_room", async (req, res) => {
+app.post("/api/get_room", async (req, res) => {
   const data = req.body;
 
   try {
@@ -45,14 +45,34 @@ app.post("/get_room", async (req, res) => {
   }
 });
 
+app.post("/api/send_category", (req, res) => {
+  const { category, roomId, player } = req.body;
+
+  const newCategory = { category, origin: player };
+
+  Room.findOneAndUpdate(
+    { id: roomId },
+    { $push: { categories: newCategory } },
+    { new: true }
+  )
+    .then((roomUpdated) => {
+      if (roomUpdated.categories.length === roomUpdated.players.length) {
+        res.json({ message: "all players send a category!" });
+      } else {
+        res.json({ message: "request received!" });
+      }
+    })
+    .catch((err) => console.log(err));
+});
+
 // Socket.io
 
 io.on("connection", (socket) => {
   console.log("client connected");
 
-  socket.on("sd", ()=> {
-    console.log(socket.rooms)
-  })
+  socket.on("sd", () => {
+    console.log(socket.rooms);
+  });
 
   socket.on("createRoom", (data) => {
     socket.join(data.id);
@@ -68,10 +88,10 @@ io.on("connection", (socket) => {
 
     if (room.password === data.password) {
       socket.join(data.id);
-      
+
       room.players.push(data.player);
       await room.save();
-      
+
       io.to(data.id).emit("roomUpdated", data.id);
       console.log(`${data.player} join game.`);
     }
@@ -87,8 +107,10 @@ io.on("connection", (socket) => {
 
       socket.to(data.id).emit("roomClosed");
     } else {
-      
-      await Room.updateOne({ id: data.id }, { $pull: { players: data.player } })
+      await Room.updateOne(
+        { id: data.id },
+        { $pull: { players: data.player } }
+      );
 
       io.to(data.id).emit("roomUpdated", data.id);
     }
@@ -98,8 +120,78 @@ io.on("connection", (socket) => {
 
   socket.on("gameStarted", (roomId) => {
     socket.to(roomId).emit("gameStarted");
-    console.log('Game started!')
-  })
+
+    let timer = 10;
+
+    const number = setInterval(() => {
+      io.to(roomId).emit("timer", timer);
+      timer--;
+
+      if (timer == -1) {
+        clearInterval(number);
+      }
+    }, 1000);
+    console.log("Game started!");
+  });
+
+  socket.on("allCategoriesReady", async (roomId) => {
+    try {
+      const room = await Room.findOne({ id: roomId });
+
+      room.currentCategory = room.categories[0].category;
+      room.categories.shift();
+
+      if (room.turnOf) {
+        const newTurn = room.players.indexOf(turnOf) + 1;
+
+        const newTurnOf = room.players[newTurn];
+
+        room.turnOf = newTurnOf;
+        await room.save();
+
+        //Timer
+        let timer = 5;
+
+        const number = setInterval(() => {
+          io.to(roomId).emit("categoriesReadyTimer", {timer_: timer, roomId});
+          timer--;
+
+          if (timer == -1) {
+            io.to(roomId).emit("allCategoriesReady", {
+              roomId,
+              initialPlayer: newTurnof,
+            });
+            clearInterval(number);
+          }
+        }, 1000);
+      } else {
+        room.turnOf = room.players[0];
+        room.save();
+
+        //Timer
+        let timer = 5;
+
+        const number = setInterval(() => {
+          io.to(roomId).emit("categoriesReadyTimer", {timer_: timer, roomId});
+          timer--;
+
+          if (timer == -1) {
+            io.to(roomId).emit("allCategoriesReady", {
+              roomId,
+              initialPlayer: room.players[0],
+            });
+            clearInterval(number);
+          }
+        }, 1000);
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  });
+
+  socket.on("playerWriting", (data) => {
+    io.to(data.roomId).emit("playerWriting", data.myResponse);
+  });
 });
 
 server.listen(8000, () => {
