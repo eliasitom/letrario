@@ -233,7 +233,7 @@ io.on("connection", (socket) => {
       room.turnOf = newTurnOf;
       await room.save();
 
-      io.to(roomId).emit("nextPlayer");
+      io.to(roomId).emit("nextPlayer", roomId);
     } catch (error) {
       console.log(error);
     }

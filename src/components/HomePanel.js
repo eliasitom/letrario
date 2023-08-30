@@ -127,7 +127,12 @@ const HomePanel = () => {
     });
 
     socket.on("nextTurn", () => {
-      getRoom(roomData.id)
+      getRoom(roomData.id);
+    });
+
+    socket.on("nextPlayer", (roomId_) => {
+      getRoom(roomId_);
+      socket.emit("startWritingTimer", roomId_);
     })
   }, []);
 

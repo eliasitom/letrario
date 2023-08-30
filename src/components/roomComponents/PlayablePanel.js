@@ -6,7 +6,6 @@ const PlayablePanel = ({
   nickname,
   socket,
   waitingPlayersC,
-  getRoom
 }) => {
   const [allLetters, setAllLetters] = useState([
     { letter: "a", enabled: true },
@@ -102,11 +101,6 @@ const PlayablePanel = ({
         submitWord()
       }
     });
-
-    socket.on("nextPlayer", () => {
-      getRoom(roomData.id);
-      socket.emit("startWritingTimer", roomData.id)
-    })
   }, []);
 
   useEffect(() => {
