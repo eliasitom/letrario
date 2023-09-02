@@ -45,6 +45,16 @@ app.post("/api/get_room", async (req, res) => {
   }
 });
 
+app.get("/api/get_rooms", async (req, res) => {
+  try {
+    const rooms = await Room.find();
+
+    res.json({ rooms });
+  } catch (error) {
+    console.log(error);
+  }
+});
+
 app.post("/api/send_category", (req, res) => {
   const { category, roomId, player } = req.body;
 
@@ -174,7 +184,11 @@ io.on("connection", (socket) => {
       let timer = 3;
 
       const number = setInterval(() => {
-        io.to(roomId).emit("categoriesReadyTimer", { timer_: timer, roomId });
+        io.to(roomId).emit("categoriesReadyTimer", {
+          timer_: timer,
+          roomId,
+          turnOf: room.players[0],
+        });
         timer--;
 
         if (timer == -1) {
@@ -203,40 +217,78 @@ io.on("connection", (socket) => {
     io.to(data.roomId).emit("letterSelected", data.letter);
   });
 
-  socket.on("startWritingTimer", (roomId) => {
-    let timer = 15;
+  socket.on("startWritingTimer", (data) => {
+    //Error a solucionar: después del primer turno (luego de seleccionar categorias), el segundo cliente en la ronda llama dos veces a este listener
+    const { roomId, player } = data;
+
+    //Esto es para filtar errores, ya que a veces un cliente llama a este listener con player = undefined
+    if(player === undefined) return;
+
+    let timer = 9999;
+
+    console.log("callTimer");
+    console.log(data);
 
     const number = setInterval(() => {
-      io.to(roomId).emit("writingTimer", { timer_: timer, roomId });
+      io.to(roomId).emit("writingTimer", {
+        timer_: timer,
+        roomId: roomId,
+      });
       timer--;
+      console.log(timer + ' _ ' + player);
 
-      if (timer == -1) {
-        clearInterval(number);
-      }
+      Room.findOne({id: roomId})
+      .then(room => {
+        if (timer == -1 || room.turnOf != player) {
+          clearInterval(number);
+        }
+      })
     }, 1000);
   });
 
   socket.on("submitWord", async (data) => {
-    try {
-      const { roomId, response } = data;
-      let room = await Room.findOne({ id: roomId });
+    console.log(
+      `${data.response.origin} envio la palabra ${data.response.word} a la categoria ${data.response.category}`
+    );
 
-      await Room.findOneAndUpdate(
-        { id: roomId },
-        { $push: { words: response } }
-      );
+    const room = await Room.findOne({ id: data.roomId });
 
-      const newTurn = room.players.indexOf(response.origin) + 1;
+    // Enviar la respuesta al documento de la sala
+    room.words.push(data.response);
 
-      const newTurnOf = room.players[newTurn];
+    // Setear al jugador del siguiente turno, si no hay mas letras para la categoria, ir a la siguiente categoria
+    const newTurn = room.players.indexOf(room.turnOf) + 1;
+    const newTurnOf = room.players[newTurn];
 
+    if (newTurnOf !== undefined) {
       room.turnOf = newTurnOf;
-      await room.save();
-
-      io.to(roomId).emit("nextPlayer", roomId);
-    } catch (error) {
-      console.log(error);
+      io.to(data.roomId).emit("nextPlayer", newTurnOf);
+    } else {
+      room.turnOf = room.players[0];
+      io.to(data.roomId).emit("nextPlayer", room.players[0]);
     }
+
+    //Si no hay mas letras ir a la siguiente categoria
+    if (room.lettersNotAvailable.length >= 26) {
+      console.log('category finished!')
+      room.categories.map((current) => {
+        if (current.category === room.currentCategory) {
+          current.finished = true;
+          room.lettersNotAvailable = [];
+
+          const nextCategoryIndex =
+            room.categories.indexOf(room.currentCategory) + 1;
+
+          room.currentCategory = room.categories[nextCategoryIndex];
+
+          console.log('next category: ' + room.categories[nextCategoryIndex])
+        }
+      });
+    }
+
+    await room.save();
+
+    io.to(data.roomId).emit("roomUpdated", data.roomId);
   });
 });
 

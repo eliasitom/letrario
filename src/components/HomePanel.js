@@ -7,6 +7,7 @@ import io from "socket.io-client";
 import CategoriesPanel from "./roomComponents/CategoriesPanel";
 import PlayablePanel from "./roomComponents/PlayablePanel";
 import GameTimer from "./roomComponents/GameTimer";
+import RoomCard from "./RoomCard";
 const socket = io("http://localhost:8000");
 
 const HomePanel = () => {
@@ -16,6 +17,8 @@ const HomePanel = () => {
 
   const [guestId, setGuestId] = useState("");
   const [guestPassword, setGuestPassword] = useState("");
+
+  const [rooms, setRooms] = useState([]);
 
   const [roomData, setRoomData] = useState(null);
   const [timer, setTimer] = useState(0);
@@ -41,13 +44,12 @@ const HomePanel = () => {
     setRoomData(data);
   };
 
-  const joinRoom = (e) => {
-    e.preventDefault();
+  const joinRoom = (guestId_) => {
 
-    if (guestId) {
+    if (guestId_) {
       socket.emit("joinRoom", {
         player: nickname,
-        id: guestId,
+        id: guestId_,
         password: guestPassword,
       });
       setGuestId("");
@@ -72,11 +74,21 @@ const HomePanel = () => {
     })
       .then((response) => response.json())
       .then((res) => {
-        console.log(res);
-
         if (!res.players.includes(nickname)) {
           setRoomData(res);
         }
+      })
+      .catch((err) => console.log(err));
+  };
+
+  const getRooms = () => {
+    fetch("http://localhost:8000/api/get_rooms", {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+    })
+      .then((response) => response.json())
+      .then((res) => {
+        setRooms(res.rooms);
       })
       .catch((err) => console.log(err));
   };
@@ -136,6 +148,10 @@ const HomePanel = () => {
     })
   }, []);
 
+  useEffect(()=> {
+    getRooms();
+  }, [])
+
   return (
     <div className="home-panel">
       <h6>{nickname}</h6>
@@ -150,7 +166,7 @@ const HomePanel = () => {
               value={nickname}
             />
           </form>
-          <form onSubmit={joinRoom}>
+          <form onSubmit={()=> joinRoom(guestId)}>
             <input
               placeholder="room id..."
               onChange={(e) => setGuestId(e.target.value)}
@@ -223,6 +239,12 @@ const HomePanel = () => {
       <button style={{ marginTop: "20px" }} onClick={() => socket.emit("sd")}>
         show socket data
       </button>
+
+      {
+        !roomData ? (rooms.map(current => (
+          <RoomCard roomId={current.id} players={current.players} handleJoin={()=> joinRoom(current.id)}/> 
+        ))) : undefined
+      }
     </div>
   );
 };

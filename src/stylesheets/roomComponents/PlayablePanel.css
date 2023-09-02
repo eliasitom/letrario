@@ -37,7 +37,7 @@
 }
 
 .disabled {
-    background-color: rgb(198, 198, 198);
+    background-color: rgb(170, 0, 0);
 }
 .current-letter {
     background-color: rgb(11, 170, 0);

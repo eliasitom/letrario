@@ -1,12 +1,7 @@
 import { useEffect, useState } from "react";
 import "../../stylesheets/roomComponents/PlayablePanel.css";
 
-const PlayablePanel = ({
-  roomData,
-  nickname,
-  socket,
-  waitingPlayersC,
-}) => {
+const PlayablePanel = ({ roomData, nickname, socket, waitingPlayersC }) => {
   const [allLetters, setAllLetters] = useState([
     { letter: "a", enabled: true },
     { letter: "b", enabled: true },
@@ -52,19 +47,28 @@ const PlayablePanel = ({
   };
 
   const submitWord = (e) => {
-    if(e) {
+    if (e) {
       e.preventDefault();
     }
 
+    if(currentLetter && myResponse) {
+      setCurrentLetter('');
+
     const response = {
       word: myResponse,
+      letter: currentLetter,
       origin: nickname,
-      category: roomData.currentCategory
+      category: roomData.currentCategory,
     };
 
-    socket.emit("submitWord", {response, roomId: roomData.id});
-    
-  }
+    socket.emit("submitWord", { response, roomId: roomData.id });
+    socket.emit("stopWritingTimer");
+    } else if(!currentLetter) {
+      alert('Don\'t forget to select a letter!')
+    } else {
+      alert('Don\'t forget your answer!')
+    }
+  };
 
   useEffect(() => {
     socket.on("playerWriting", (data) => {
@@ -84,21 +88,32 @@ const PlayablePanel = ({
     });
 
     socket.on("categoriesReadyTimer", (data) => {
-      const {timer_, roomId} = data;
+      const { timer_, roomId, turnOf } = data;
 
-      if(timer_ === 0) {
-        socket.emit("startWritingTimer", roomId)
+      if (timer_ === 0 && turnOf === nickname) {
+        console.log("turnOf: " + turnOf + ' ____ ' + 'my nickname is: ' + nickname);
+        console.log({roomId, player: nickname})
+        socket.emit("startWritingTimer", {roomId, player: nickname});
       }
     });
 
-    socket.on("writingTimer", data => {
-      
-      const {timer_} = data;
+    socket.on("writingTimer", (data) => {
+      const { timer_ } = data;
 
-      setWritingTimer(timer_)
+      setWritingTimer(timer_);
 
-      if(timer_ === 0 && data.turnOf === nickname) {
-        submitWord()
+      if (timer_ === 0) {
+        submitWord();
+      }
+    });
+
+    socket.on("nextPlayer", turnOf => {
+      console.log("turnOf: " + turnOf + ' ____ ' + 'my nickname is: ' + nickname);
+
+      if(turnOf === nickname) {
+        console.log('myTurn')
+        console.log({roomId: roomData.id, player: nickname})
+        socket.emit("startWritingTimer", {roomId: roomData.id, player: nickname});
       }
     });
   }, []);
@@ -113,7 +128,9 @@ const PlayablePanel = ({
         {!waitingPlayersC && roomData.turnOf === nickname
           ? allLetters.map((current) => (
               <p
-                onClick={() => letterSelected(current.letter)}
+                onClick={() =>
+                  current.enabled ? letterSelected(current.letter) : undefined
+                }
                 className={`letter ${!current.enabled ? "disabled" : ""} ${
                   current.letter === currentLetter ? "current-letter" : ""
                 }`}
@@ -130,7 +147,7 @@ const PlayablePanel = ({
       ) : roomData.turnOf === nickname ? (
         <div className="room-response-div">
           <h3>{roomData.currentCategory}</h3>
-          <form onSubmit={(e)=> submitWord(e)}>
+          <form onSubmit={(e) => submitWord(e)}>
             <p>{writingTimer}</p>
             <input
               placeholder="some thing..."
