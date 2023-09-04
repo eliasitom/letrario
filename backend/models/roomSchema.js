@@ -6,6 +6,9 @@ const roomSchema = new Schema({
     required: true, //Esto es para que el dato sea requerido
     unique: true //Esto es para que el dato sea unico
   },
+  name: {
+    type: String
+  },
   admin: {
     type: String,
     required: true,
@@ -23,7 +26,12 @@ const roomSchema = new Schema({
     String
   ],
   categories: [
-    Object
+    {
+      origin: String,
+      letter: String,
+      finished: Boolean,
+      category: String
+    }
   ],
   currentCategory: {
     type: String

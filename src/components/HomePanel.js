@@ -8,12 +8,14 @@ import CategoriesPanel from "./roomComponents/CategoriesPanel";
 import PlayablePanel from "./roomComponents/PlayablePanel";
 import GameTimer from "./roomComponents/GameTimer";
 import RoomCard from "./RoomCard";
+import VotingPanel from "./roomComponents/VotingPanel";
 const socket = io("http://localhost:8000");
 
 const HomePanel = () => {
   const [nickname, setNickname] = useState("");
 
   const [hostPassword, setHostPassword] = useState("");
+  const [hostName, setHostName] = useState("");
 
   const [guestId, setGuestId] = useState("");
   const [guestPassword, setGuestPassword] = useState("");
@@ -27,11 +29,14 @@ const HomePanel = () => {
   const [waitingPlayersC, setWaitingPlayersC] = useState(true); //Esperando categorias de jugadores...
   const [categoriesReadyT, setCategoriesReadyT] = useState(0); //Categorias listas temporizador...
 
+  const [wordsAndCategories, setWordsAndCategories] = useState(null);
+
   const createRoom = (e) => {
     e.preventDefault();
 
     const data = {
       id: uuidv4(),
+      name: hostName,
       admin: nickname,
       password: hostPassword,
       players: [nickname],
@@ -45,7 +50,6 @@ const HomePanel = () => {
   };
 
   const joinRoom = (guestId_) => {
-
     if (guestId_) {
       socket.emit("joinRoom", {
         player: nickname,
@@ -129,11 +133,11 @@ const HomePanel = () => {
     });
 
     socket.on("categoriesReadyTimer", (data) => {
-      const {roomId, timer_} = data;
+      const { roomId, timer_ } = data;
 
       setCategoriesReadyT(timer_);
 
-      if(timer_ === 0) {
+      if (timer_ === 0) {
         getRoom(roomId);
       }
     });
@@ -145,19 +149,24 @@ const HomePanel = () => {
     socket.on("nextPlayer", (roomId_) => {
       getRoom(roomId_);
       socket.emit("startWritingTimer", roomId_);
+    });
+
+    socket.on("gameFinished", data => {
+      setWordsAndCategories(data);
     })
   }, []);
 
-  useEffect(()=> {
+  useEffect(() => {
     getRooms();
-  }, [])
+  }, []);
 
   return (
     <div className="home-panel">
-      <h6>{nickname}</h6>
+      <h1>LETRARIO</h1>
       {!roomData ? (
         <div>
-          <form>
+          <form className="nickname-form card">
+            <label>put your nickname!</label>
             <input
               placeholder="nickname..."
               onChange={(e) => {
@@ -166,7 +175,8 @@ const HomePanel = () => {
               value={nickname}
             />
           </form>
-          <form onSubmit={()=> joinRoom(guestId)}>
+          <form className="card" onSubmit={() => joinRoom(guestId)}>
+            <label>join room</label>
             <input
               placeholder="room id..."
               onChange={(e) => setGuestId(e.target.value)}
@@ -180,7 +190,13 @@ const HomePanel = () => {
             />
             <button>join room</button>
           </form>
-          <form onSubmit={createRoom}>
+          <form className="card" onSubmit={createRoom}>
+            <label>create room</label>
+            <input
+              placeholder="room name..."
+              onChange={(e) => setHostName(e.target.value)}
+              value={hostName}
+            />
             <input
               type="password"
               placeholder="room password..."
@@ -192,8 +208,10 @@ const HomePanel = () => {
         </div>
       ) : (
         <div className="home-room">
-          <h1 className="home-room-title">¡letrario!</h1>
-          <h5 className="home-room-id">{roomData.id}</h5>
+         {
+          !wordsAndCategories ? 
+          <>
+           <h5 className="home-room-id">room id: {roomData.id}</h5>
           {timer > 1 ? (
             <GameTimer timer={timer} type={"startGame"} />
           ) : categoriesPanel ? (
@@ -219,32 +237,44 @@ const HomePanel = () => {
           ) : undefined}
 
           {roomData.admin === nickname ? (
-            <button onClick={startGame}>start game</button>
+            <button className="start-button" onClick={startGame}>
+              start game
+            </button>
           ) : undefined}
-          <button onClick={leaveRoom}>Salir</button>
+          <button onClick={leaveRoom}>leave</button>
+          </> : <VotingPanel nickname={nickname} words={wordsAndCategories.words} categories={wordsAndCategories.categories}/>
+         }
         </div>
       )}
       <div className="room-players-list">
-        {roomData
-          ? roomData.players.map((player) => (
+        {roomData ? (
+          <>
+            <h3>current players {"(" + roomData.players.length + "/4)"}:</h3>
+            {roomData.players.map((player) => (
               <p
                 className={roomData.turnOf === player ? "you-turn" : ""}
                 key={player}
               >
                 {player}
               </p>
-            ))
-          : undefined}
+            ))}
+          </>
+        ) : undefined}
       </div>
       <button style={{ marginTop: "20px" }} onClick={() => socket.emit("sd")}>
         show socket data
       </button>
 
-      {
-        !roomData ? (rooms.map(current => (
-          <RoomCard roomId={current.id} players={current.players} handleJoin={()=> joinRoom(current.id)}/> 
-        ))) : undefined
-      }
+      {!roomData
+        ? rooms.map((current) => (
+            <RoomCard
+              key={current.id}
+              name={current.name}
+              players={current.players}
+              handleJoin={() => joinRoom(current.id)}
+            />
+          ))
+        : undefined}
     </div>
   );
 };

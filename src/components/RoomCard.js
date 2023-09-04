@@ -1,10 +1,10 @@
 import '../stylesheets/RoomCard.css';
 
 
-const RoomCard = ({ roomId, players, handleJoin }) => {
+const RoomCard = ({ name, players, handleJoin }) => {
   return (
-    <div className="room-card">
-      <p className="room-card-id">{roomId}</p>
+    <div className="card">
+      <p className="room-card-name">{name}</p>
       <p className="room-card-players">players: {players.length}/4</p>
       <button onClick={handleJoin}>join</button>
     </div>

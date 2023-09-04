@@ -5,6 +5,8 @@
     align-items: center;
     flex-wrap: wrap;
     flex-direction: column;
+
+    background-color: var(--color-1);
 }
 
 .letters-div {
@@ -19,9 +21,10 @@
     height: 30px;
     margin: 5px;
 
-    background-color: rgb(255, 255, 255);
+    background-color: var(--color-2);
     border-radius: 50px;
     border: solid black 1px;
+    box-shadow: -2px 3px 1px black;
 
     font-weight: bold;
     text-transform: uppercase;
@@ -33,14 +36,54 @@
     cursor: pointer;
 }
 .letter:hover {
-    background-color: rgb(218, 218, 218);
+    background-color: var(--color-2-hover);
 }
 
 .disabled {
-    background-color: rgb(170, 0, 0);
+    width: 30px;
+    height: 30px;
+    margin: 5px;
+
+    background-color: var(--color-5);
+    border-radius: 50px;
+    border: solid black 1px;
+    box-shadow: -2px 3px 1px black;
+
+    font-weight: bold;
+    text-transform: uppercase;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    cursor: pointer;
 }
+.disabled:hover {
+    background-color: var(--color-5-hover);
+}
+
 .current-letter {
-    background-color: rgb(11, 170, 0);
+    width: 30px;
+    height: 30px;
+    margin: 5px;
+
+    background-color: var(--color-4);
+    border-radius: 50px;
+    border: solid black 1px;
+    box-shadow: -2px 3px 1px black;
+
+    font-weight: bold;
+    text-transform: uppercase;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    cursor: pointer;
+
+}
+.current-letter:hover {
+    background-color: var(--color-4-hover);
 }
 
 
@@ -49,24 +92,29 @@
     flex-direction: column;
     justify-content: center;
     align-items: center;
+
+    width: 600px;
 }
 .room-response-div h3 {
     margin: 0;
     margin-top: 10px;
 }
 .room-response-div form {
-    margin-top: 0;
-}
-
-.room-response-div form {
     height: 60px;
     width: 100%;
+    margin-top: 0;
 
     display: flex;
     justify-content: center;
     align-items: center;
     flex-direction: row;
 }
+.room-response-div div {
+    width: 170px;
+    display: flex;
+    justify-content: center;
+}
+
 
 .room-response-div input {
     border: solid black 1px;
@@ -80,6 +128,7 @@
     width: 80px;
     height: 30px;
     margin-left: 10px;
+    margin-top: 0;
 
     border: solid black 1px;
     border-radius: 20px;
@@ -119,7 +168,7 @@
     height: 30px;
     margin-top: 10px;
 
-    background-color: rgb(173, 173, 173);
+    background-color: var(--color-2-hover);
     border-radius: 20px;
     border: solid black 1px;
 

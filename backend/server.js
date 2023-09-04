@@ -23,9 +23,10 @@ app.use(express.json());
 
 //Functions
 
-function createRoom(id, password, admin) {
+function createRoom(id, password, admin, name) {
   const newRoom = new Room({
     id,
+    name,
     password,
     admin,
     players: [admin],
@@ -88,7 +89,7 @@ io.on("connection", (socket) => {
     socket.join(data.id);
     io.to(data.id).emit("join", data);
 
-    createRoom(data.id, data.password, data.admin);
+    createRoom(data.id, data.password, data.admin, data.name);
 
     console.log(`${data.admin} created a new room. id: ${data.id}`);
   });
@@ -222,7 +223,7 @@ io.on("connection", (socket) => {
     const { roomId, player } = data;
 
     //Esto es para filtar errores, ya que a veces un cliente llama a este listener con player = undefined
-    if(player === undefined) return;
+    if (player === undefined) return;
 
     let timer = 9999;
 
@@ -235,14 +236,13 @@ io.on("connection", (socket) => {
         roomId: roomId,
       });
       timer--;
-      console.log(timer + ' _ ' + player);
+      console.log(timer + " _ " + player);
 
-      Room.findOne({id: roomId})
-      .then(room => {
+      Room.findOne({ id: roomId }).then((room) => {
         if (timer == -1 || room.turnOf != player) {
           clearInterval(number);
         }
-      })
+      });
     }, 1000);
   });
 
@@ -267,27 +267,33 @@ io.on("connection", (socket) => {
       room.turnOf = room.players[0];
       io.to(data.roomId).emit("nextPlayer", room.players[0]);
     }
+    await room.save();
+
 
     //Si no hay mas letras ir a la siguiente categoria
     if (room.lettersNotAvailable.length >= 26) {
-      console.log('category finished!')
-      room.categories.map((current) => {
-        if (current.category === room.currentCategory) {
-          current.finished = true;
-          room.lettersNotAvailable = [];
+      console.log("category finished!");
+      io.to(data.roomId).emit("categoryFinished");
 
-          const nextCategoryIndex =
-            room.categories.indexOf(room.currentCategory) + 1;
+      let currentCateogryIndex = room.categories.findIndex(obj => obj.category === room.currentCategory);
+      console.log('currentCateogryIndex: ' + currentCateogryIndex);
+      room.categories[currentCateogryIndex].finished = true;
 
-          room.currentCategory = room.categories[nextCategoryIndex];
+      room.lettersNotAvailable = [];
 
-          console.log('next category: ' + room.categories[nextCategoryIndex])
-        }
-      });
+      //Si hay mas categorias ir a la siguiente, sino finalizar juego
+      if(room.categories[currentCateogryIndex + 1] == undefined) {
+        io.to(room.id).emit('gameFinished', {words: room.words, categories: room.categories})
+      } else {
+        room.currentCategory = room.categories[currentCateogryIndex + 1].category;
+
+        await room.save();
+
+        console.log(
+          "next category: " + room.categories[currentCateogryIndex + 1].category
+        );
+      }
     }
-
-    await room.save();
-
     io.to(data.roomId).emit("roomUpdated", data.roomId);
   });
 });

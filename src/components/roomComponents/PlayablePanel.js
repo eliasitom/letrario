@@ -65,7 +65,7 @@ const PlayablePanel = ({ roomData, nickname, socket, waitingPlayersC }) => {
     socket.emit("stopWritingTimer");
     } else if(!currentLetter) {
       alert('Don\'t forget to select a letter!')
-    } else {
+    } else if(!myResponse) {
       alert('Don\'t forget your answer!')
     }
   };
@@ -116,6 +116,14 @@ const PlayablePanel = ({ roomData, nickname, socket, waitingPlayersC }) => {
         socket.emit("startWritingTimer", {roomId: roomData.id, player: nickname});
       }
     });
+
+    socket.on("categoryFinished", () => {
+      let newLetters = allLetters;
+
+      newLetters.map(c => c.enabled = true);
+
+      setAllLetters(newLetters);
+    })
   }, []);
 
   useEffect(() => {
@@ -131,7 +139,7 @@ const PlayablePanel = ({ roomData, nickname, socket, waitingPlayersC }) => {
                 onClick={() =>
                   current.enabled ? letterSelected(current.letter) : undefined
                 }
-                className={`letter ${!current.enabled ? "disabled" : ""} ${
+                className={`${!current.enabled ? "disabled" : "letter"} ${
                   current.letter === currentLetter ? "current-letter" : ""
                 }`}
                 key={current.letter}
@@ -153,7 +161,9 @@ const PlayablePanel = ({ roomData, nickname, socket, waitingPlayersC }) => {
               placeholder="some thing..."
               onChange={(e) => setMyResponse(e.target.value)}
             />
+            <div>
             <button>send</button>
+            </div>
           </form>
         </div>
       ) : (
