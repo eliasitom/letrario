@@ -1,26 +1,125 @@
 
 .category-panel {
-    background-color: red;
-
     width: 100%;
     height: auto;
-    margin: 10px;
+    margin: 10px 0 50px 0;
 
     display: flex;
     justify-content: center;
     align-items: center;
     flex-direction: column;
 }
+.category-panel h3 {
+    font-size: 30px;
+    margin-bottom: 10px;
+}
+
+
+
+
+
+/* word container */
+
+
 .words-container {
     display: flex;
     justify-content: center;
     align-items: center;
     flex-wrap: wrap;
 }
-.word-container {
-    background-color: blue;
 
-    width: 200px;
-    height: 100px;
+.word-container {
+    background-color: var(--color-2);
+    border-radius: 20px;
+    border: 2px solid black;
+    box-shadow: -2px 3px 1px black;
+
+    width: 250px;
+    height: 150px;
     margin: 5px;
+    padding-bottom: 10px;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+}
+.word-container div {
+    display: flex;
+    align-items: center;
+}
+
+.word-container h4{
+    margin-top: 5px;
+}
+.word-container-letter {
+    width: 30px;
+    height: 30px;
+    margin-right: 10px;
+
+    background-color: var(--color-1);
+    border-radius: 50px;
+    border: solid black 1px;
+    box-shadow: -2px 3px 1px black;
+
+    font-weight: bold;
+    text-transform: uppercase;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.word-voting-container {
+    margin-top: 10px;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.word-voting-container div {
+    width: 60px;
+    height: 60px;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.svg-like, .svg-dislike {
+    font-size: 30px;
+    margin: 0 10px 0 10px;
+}
+
+.svg-like:hover, .svg-dislike:hover {
+    cursor: pointer;
+
+    animation-name: svg-hover;
+    animation-duration: 0.2s;
+    animation-fill-mode: forwards;
+}
+
+.svg-like:not(:hover), .svg-dislike:not(:hover) {
+    cursor: pointer;
+
+    animation-name: svg-not-hover;
+    animation-duration: 0.2s;
+    animation-fill-mode: forwards;
+}
+
+@keyframes svg-hover {
+    0% {font-size: 30px}
+    100% {font-size: 40px}
+}
+@keyframes svg-not-hover {
+    0% {font-size: 40px}
+    100% {font-size: 30px}
+}
+
+.word-container-notification {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    
+    width: 100%;
+    height: 50px;
 }

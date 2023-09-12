@@ -37,7 +37,14 @@ const roomSchema = new Schema({
     type: String
   },
   words: [
-    Object
+    {
+      word: String,
+      letter: String,
+      origin: String,
+      category: String,
+      likes: [],
+      dislikes: []
+    }
   ]
 })
 

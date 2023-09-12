@@ -38,12 +38,27 @@ const PlayablePanel = ({ roomData, nickname, socket, waitingPlayersC }) => {
   const [playerCurrentL, setPlayerCurrentL] = useState(""); //Player current letter...
   const [writingTimer, setWritingTimer] = useState(-1);
 
-  const letterSelected = (letter) => {
-    if (!currentLetter) {
-      socket.emit("letterSelected", { letter, roomId: roomData.id });
 
-      setCurrentLetter(letter);
+
+
+
+
+
+
+
+
+  const setMyResponse_ = (e) => {
+    for (const letter of allLetters) {
+      if((myResponse.length === 0 && letter.enabled && letter.letter === e) || myResponse.length > 0) {
+        setMyResponse(e);
+      }
     }
+  }
+
+  const letterSelected = (letter) => {
+    socket.emit("letterSelected", { letter, roomId: roomData.id });
+
+    setCurrentLetter(letter);
   };
 
   const submitWord = (e) => {
@@ -51,22 +66,22 @@ const PlayablePanel = ({ roomData, nickname, socket, waitingPlayersC }) => {
       e.preventDefault();
     }
 
-    if(currentLetter && myResponse) {
-      setCurrentLetter('');
+    if (currentLetter && myResponse) {
+      setCurrentLetter("");
 
-    const response = {
-      word: myResponse,
-      letter: currentLetter,
-      origin: nickname,
-      category: roomData.currentCategory,
-    };
+      const response = {
+        word: myResponse,
+        letter: currentLetter,
+        origin: nickname,
+        category: roomData.currentCategory,
+      };
 
-    socket.emit("submitWord", { response, roomId: roomData.id });
-    socket.emit("stopWritingTimer");
-    } else if(!currentLetter) {
-      alert('Don\'t forget to select a letter!')
-    } else if(!myResponse) {
-      alert('Don\'t forget your answer!')
+      socket.emit("submitWord", { response, roomId: roomData.id });
+      socket.emit("stopWritingTimer");
+    } else if (!currentLetter) {
+      alert("Don't forget to select a letter!");
+    } else if (!myResponse) {
+      alert("Don't forget your answer!");
     }
   };
 
@@ -91,9 +106,11 @@ const PlayablePanel = ({ roomData, nickname, socket, waitingPlayersC }) => {
       const { timer_, roomId, turnOf } = data;
 
       if (timer_ === 0 && turnOf === nickname) {
-        console.log("turnOf: " + turnOf + ' ____ ' + 'my nickname is: ' + nickname);
-        console.log({roomId, player: nickname})
-        socket.emit("startWritingTimer", {roomId, player: nickname});
+        console.log(
+          "turnOf: " + turnOf + " ____ " + "my nickname is: " + nickname
+        );
+        console.log({ roomId, player: nickname });
+        socket.emit("startWritingTimer", { roomId, player: nickname });
       }
     });
 
@@ -107,26 +124,35 @@ const PlayablePanel = ({ roomData, nickname, socket, waitingPlayersC }) => {
       }
     });
 
-    socket.on("nextPlayer", turnOf => {
-      console.log("turnOf: " + turnOf + ' ____ ' + 'my nickname is: ' + nickname);
+    socket.on("nextPlayer", (turnOf) => {
+      console.log(
+        "turnOf: " + turnOf + " ____ " + "my nickname is: " + nickname
+      );
 
-      if(turnOf === nickname) {
-        console.log('myTurn')
-        console.log({roomId: roomData.id, player: nickname})
-        socket.emit("startWritingTimer", {roomId: roomData.id, player: nickname});
+      if (turnOf === nickname) {
+        console.log("myTurn");
+        console.log({ roomId: roomData.id, player: nickname });
+        socket.emit("startWritingTimer", {
+          roomId: roomData.id,
+          player: nickname,
+        });
       }
     });
 
     socket.on("categoryFinished", () => {
       let newLetters = allLetters;
 
-      newLetters.map(c => c.enabled = true);
+      newLetters.map((c) => (c.enabled = true));
 
       setAllLetters(newLetters);
-    })
+    });
   }, []);
 
   useEffect(() => {
+    if (myResponse.length === 1 && !roomData.lettersNotAvailable.includes(myResponse)) {
+      letterSelected(myResponse);
+    }
+
     socket.emit("playerWriting", { myResponse, roomId: roomData.id });
   }, [myResponse]);
 
@@ -159,10 +185,10 @@ const PlayablePanel = ({ roomData, nickname, socket, waitingPlayersC }) => {
             <p>{writingTimer}</p>
             <input
               placeholder="some thing..."
-              onChange={(e) => setMyResponse(e.target.value)}
+              onChange={(e) => setMyResponse_(e.target.value)}
             />
             <div>
-            <button>send</button>
+              <button>send</button>
             </div>
           </form>
         </div>

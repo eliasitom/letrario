@@ -1,4 +1,5 @@
 const dbURI = 'mongodb+srv://Eliasito:ckroc123456789@cluster0.5kzub0s.mongodb.net/?retryWrites=true&w=majority'
+//CUIDADO: estoy imprimiendo mi contraseña por consola, debería usar una plantilla literal e importar mi contraseña de una variable de estado.
 
 const mongoose = require('mongoose');
 

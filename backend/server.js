@@ -1,11 +1,11 @@
 require("./database");
 const Room = require("./models/roomSchema");
+const mongoose = require('mongoose');
 
 const express = require("express");
 const cors = require("cors");
 
 const http = require("http");
-const roomSchema = require("./models/roomSchema");
 const socketServer = require("socket.io").Server;
 
 const app = express();
@@ -210,10 +210,10 @@ io.on("connection", (socket) => {
   });
 
   socket.on("letterSelected", async (data) => {
-    await Room.findOneAndUpdate(
-      { id: data.roomId },
-      { $push: { lettersNotAvailable: data.letter } }
-    );
+    // await Room.findOneAndUpdate(
+    //   { id: data.roomId },
+    //   { $push: { lettersNotAvailable: data.letter } }
+    // );
 
     io.to(data.roomId).emit("letterSelected", data.letter);
   });
@@ -256,6 +256,8 @@ io.on("connection", (socket) => {
     // Enviar la respuesta al documento de la sala
     room.words.push(data.response);
 
+    room.lettersNotAvailable.push(data.response.letter);
+
     // Setear al jugador del siguiente turno, si no hay mas letras para la categoria, ir a la siguiente categoria
     const newTurn = room.players.indexOf(room.turnOf) + 1;
     const newTurnOf = room.players[newTurn];
@@ -269,23 +271,28 @@ io.on("connection", (socket) => {
     }
     await room.save();
 
-
-    //Si no hay mas letras ir a la siguiente categoria
-    if (room.lettersNotAvailable.length >= 26) {
+    //Si no hay mas letras ir a la siguiente categoria (26 son todas las letras del abecedario sin contar la ñ)
+    if (room.lettersNotAvailable.length >= 2) {
       console.log("category finished!");
       io.to(data.roomId).emit("categoryFinished");
 
-      let currentCateogryIndex = room.categories.findIndex(obj => obj.category === room.currentCategory);
-      console.log('currentCateogryIndex: ' + currentCateogryIndex);
+      let currentCateogryIndex = room.categories.findIndex(
+        (obj) => obj.category === room.currentCategory
+      );
+      console.log("currentCateogryIndex: " + currentCateogryIndex);
       room.categories[currentCateogryIndex].finished = true;
 
       room.lettersNotAvailable = [];
 
       //Si hay mas categorias ir a la siguiente, sino finalizar juego
-      if(room.categories[currentCateogryIndex + 1] == undefined) {
-        io.to(room.id).emit('gameFinished', {words: room.words, categories: room.categories})
+      if (room.categories[currentCateogryIndex + 1] == undefined) {
+        io.to(room.id).emit("gameFinished", {
+          words: room.words,
+          categories: room.categories,
+        });
       } else {
-        room.currentCategory = room.categories[currentCateogryIndex + 1].category;
+        room.currentCategory =
+          room.categories[currentCateogryIndex + 1].category;
 
         await room.save();
 
@@ -296,6 +303,56 @@ io.on("connection", (socket) => {
     }
     io.to(data.roomId).emit("roomUpdated", data.roomId);
   });
+
+  // socket.on("approveAnswer", async (data) => {    
+
+  //   Room.findOneAndUpdate({words: {$elemMatch: {_id: data.word._id}}}, {$push: {"words.$[elem].likes": data.player}}, {arrayFilters: [{"elem._id": data.word._id}]})
+  //   .then((room) => {
+  //     socket.to(room.id).emit("approveAnswer", {origin: data.player, word: data.word})
+  //   })
+  //   .catch(err => console.log(err))
+  // });
+
+  socket.on("approveAnswer", async (data) => { 
+    const { word, player } = data;   
+
+    let room = await Room.findOne({words: {$elemMatch: {_id: word._id}}})
+    let currentWord = await room.words.find(current => current._id == word._id);
+    
+    if(!currentWord.likes.includes(player)) {
+      currentWord.likes.push(player);
+              
+      if(currentWord.dislikes.includes(player)) {
+        currentWord.dislikes = currentWord.dislikes.filter(current => current !== player);
+      }
+    }
+    
+    room.markModified('words'); // le decimos a mongoose que el campo words ha cambiado
+    await room.save();
+    
+    socket.to(room.id).emit("approveAnswer", {origin: data.player, word: data.word})
+  });
+
+  socket.on("disapproveAnswer", async (data) => { 
+    const { word, player } = data;   
+
+    let room = await Room.findOne({words: {$elemMatch: {_id: word._id}}})
+    let currentWord = await room.words.find(current => current._id == word._id);
+    
+    if(!currentWord.dislikes.includes(player)) {
+      currentWord.dislikes.push(player);
+              
+      if(currentWord.likes.includes(player)) {
+        currentWord.likes = currentWord.likes.filter(current => current !== player);
+      }
+    }
+    
+    room.markModified('words'); // le decimos a mongoose que el campo words ha cambiado
+    await room.save(); 
+    
+    socket.to(room.id).emit("disapproveAnswer", {origin: data.player, word: data.word})
+  });
+
 });
 
 server.listen(8000, () => {

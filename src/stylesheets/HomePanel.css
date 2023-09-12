@@ -112,7 +112,8 @@ input::placeholder {
     box-shadow: -2px 3px 1px black;
 
     width: 90%;
-    height: 400px;
+    min-height: 400px;
+    height: auto;
 
     display: flex;
     align-items: center;
