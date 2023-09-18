@@ -16,6 +16,10 @@ const roomSchema = new Schema({
   players: [
     String
   ],
+  inGame: {
+    type: Boolean,
+    default: false
+  },
   turnOf: {
     type: String
   },

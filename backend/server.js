@@ -81,10 +81,6 @@ app.post("/api/send_category", (req, res) => {
 io.on("connection", (socket) => {
   console.log("client connected");
 
-  socket.on("sd", () => {
-    console.log(socket.rooms);
-  });
-
   socket.on("createRoom", (data) => {
     socket.join(data.id);
     io.to(data.id).emit("join", data);
@@ -129,9 +125,11 @@ io.on("connection", (socket) => {
     console.log(`${data.player} left game.`);
   });
 
-  socket.on("gameStarted", (roomId) => {
-    socket.to(roomId).emit("gameStarted");
-
+  socket.on("gameStarted", async (roomId) => {
+    await Room.findOneAndUpdate({id: roomId}, {inGame: true})
+    io.to(roomId).emit("roomUpdated", roomId)
+    
+    
     let timer = 5;
 
     const number = setInterval(() => {
@@ -142,7 +140,6 @@ io.on("connection", (socket) => {
         clearInterval(number);
       }
     }, 1000);
-    console.log("Game started!");
   });
 
   socket.on("allCategoriesReady", async (roomId) => {
@@ -177,7 +174,7 @@ io.on("connection", (socket) => {
       //     }
       //   }, 1000);
       // } else {
-      console.log("else");
+
       room.turnOf = room.players[0];
       room.save();
 
@@ -227,16 +224,12 @@ io.on("connection", (socket) => {
 
     let timer = 9999;
 
-    console.log("callTimer");
-    console.log(data);
-
     const number = setInterval(() => {
       io.to(roomId).emit("writingTimer", {
         timer_: timer,
         roomId: roomId,
       });
       timer--;
-      console.log(timer + " _ " + player);
 
       Room.findOne({ id: roomId }).then((room) => {
         if (timer == -1 || room.turnOf != player) {
@@ -247,9 +240,7 @@ io.on("connection", (socket) => {
   });
 
   socket.on("submitWord", async (data) => {
-    console.log(
-      `${data.response.origin} envio la palabra ${data.response.word} a la categoria ${data.response.category}`
-    );
+    io.to(data.roomId).emit("letterUsed", data.response.letter);
 
     const room = await Room.findOne({ id: data.roomId });
 
@@ -272,14 +263,12 @@ io.on("connection", (socket) => {
     await room.save();
 
     //Si no hay mas letras ir a la siguiente categoria (26 son todas las letras del abecedario sin contar la ñ)
-    if (room.lettersNotAvailable.length >= 2) {
-      console.log("category finished!");
+    if (room.lettersNotAvailable.length >= 4) {
       io.to(data.roomId).emit("categoryFinished");
 
       let currentCateogryIndex = room.categories.findIndex(
         (obj) => obj.category === room.currentCategory
       );
-      console.log("currentCateogryIndex: " + currentCateogryIndex);
       room.categories[currentCateogryIndex].finished = true;
 
       room.lettersNotAvailable = [];
@@ -295,10 +284,6 @@ io.on("connection", (socket) => {
           room.categories[currentCateogryIndex + 1].category;
 
         await room.save();
-
-        console.log(
-          "next category: " + room.categories[currentCateogryIndex + 1].category
-        );
       }
     }
     io.to(data.roomId).emit("roomUpdated", data.roomId);

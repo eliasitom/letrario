@@ -2,7 +2,50 @@
     font-size: 20px;
 }
 
-.room-card-players {
-    font-size: 16px;
+
+/* ROOM STATE */
+
+.room-card-state {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+
+    width: 50%;
+    padding: 5px 0 5px 0;
+    margin-bottom: 5px;
+    border-bottom: 2px solid black;
+}
+.room-card-state div {
+    display: flex;
+    flex-direction: row;
+}
+.room-card-state p {
     color: rgba(0, 0, 0, 0.516);
+}
+.room-card-graphic-state {
+    width: 15px;
+    height: 15px;
+    margin-left: 5px;
+
+    border: 2px solid black;
+    border-radius: 50px;
+}
+.room-in-game {
+    background: var(--color-5);
+}
+.waiting-room {
+    background: var(--color-4-hover);
+}
+
+
+/* FORM */
+
+.card form {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+
+    width: 50%;
 }

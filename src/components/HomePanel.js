@@ -9,6 +9,8 @@ import GameTimer from "./roomComponents/GameTimer";
 import RoomCard from "./RoomCard";
 import VotingPanel from "./roomComponents/VotingPanel";
 
+import { BiSolidCrown } from 'react-icons/bi';
+
 import { Context, ContextProvider } from "../context/Context";
 
 const HomePanel = () => {
@@ -59,12 +61,12 @@ const HomePanel = () => {
     setRoomData(data);
   };
 
-  const joinRoom = (guestId_) => {
+  const joinRoom = (guestId_, password_) => {
     if (guestId_) {
       socket.emit("joinRoom", {
         player: nickname,
         id: guestId_,
-        password: guestPassword,
+        password: password_ ? password_ : guestPassword ? guestPassword : '',
       });
       setGuestId("");
       setGuestPassword("");
@@ -91,7 +93,7 @@ const HomePanel = () => {
         if (!res.players.includes(nickname)) {
           setRoomData(res);
 
-          c_setRoomId(roomId_); //Agregué esta línea
+          c_setRoomId(roomId_);
         }
       })
       .catch((err) => console.log(err));
@@ -115,17 +117,12 @@ const HomePanel = () => {
 
   useEffect(() => {
     socket.on("roomUpdated", (roomId_) => {
-      console.log("roomUpdated");
       getRoom(roomId_);
     });
 
     socket.on("roomClosed", () => {
       alert("¡la sala ha sido cerrada!");
       setRoomData(null);
-    });
-
-    socket.on("gameStarted", () => {
-      console.log("El juego ha comenzado!");
     });
 
     socket.on("timer", (timer_) => {
@@ -179,7 +176,7 @@ const HomePanel = () => {
   return (
     <ContextProvider>
       <div className="home-panel">
-        <h1>LETRARIO</h1>
+        <h1 className="home-title">{!roomData ? "LETRARIO" : roomData.name}</h1>
         {!roomData ? (
           <div>
             <form className="nickname-form card">
@@ -192,7 +189,7 @@ const HomePanel = () => {
                 value={nickname}
               />
             </form>
-            <form className="card" onSubmit={() => joinRoom(guestId)}>
+            <form className="card" onSubmit={(e) => {joinRoom(guestId); e.preventDefault()}}>
               <label>join room</label>
               <input
                 placeholder="room id..."
@@ -225,9 +222,13 @@ const HomePanel = () => {
           </div>
         ) : (
           <div className="home-room">
+            {
+              !roomData.inGame ? 
+              <p className="room-subtitle">Finding the right letter is finding the right word! Don't leave, Letrario is about to start!</p>
+              : undefined
+            }
             {!c_wordsAndCategories ? (
               <>
-                <h5 className="home-room-id">room id: {roomData.id}</h5>
                 {timer > 1 ? (
                   <GameTimer timer={timer} type={"startGame"} />
                 ) : categoriesPanel ? (
@@ -252,12 +253,11 @@ const HomePanel = () => {
                   />
                 ) : undefined}
 
-                {roomData.admin === nickname ? (
+                {roomData.admin === nickname && !roomData.inGame ? (
                   <button className="start-button" onClick={startGame}>
                     start game
                   </button>
                 ) : undefined}
-                <button onClick={leaveRoom}>leave</button>
               </>
             ) : (
               <VotingPanel
@@ -268,24 +268,29 @@ const HomePanel = () => {
             )}
           </div>
         )}
-        <div className="room-players-list">
-          {roomData ? (
-            <>
-              <h3>current players {"(" + roomData.players.length + "/4)"}:</h3>
-              {roomData.players.map((player) => (
-                <p
-                  className={roomData.turnOf === player ? "you-turn" : ""}
-                  key={player}
-                >
-                  {player}
-                </p>
-              ))}
-            </>
-          ) : undefined}
-        </div>
-        <button style={{ marginTop: "20px" }} onClick={() => socket.emit("sd")}>
-          show socket data
-        </button>
+        {roomData ? (
+          <div className="room-players-list">
+            <h3>current players {"(" + roomData.players.length + "/4)"}:</h3>
+            {roomData.players.map((player) => (
+              <p
+                className={`player-list-item ${roomData.turnOf === player ? "you-turn" : ""}`}
+                key={player}
+              >
+                {player}
+                {
+                  roomData.admin === player ?
+                  <BiSolidCrown /> :
+                  undefined
+                }
+              </p>
+            ))}
+            <div className="home-room-id-div">
+              <p>Share this ID with your friends:</p>
+              <h5>{roomData.id}</h5>
+            </div>
+            <button onClick={leaveRoom}>leave</button>
+          </div>
+        ) : undefined}
 
         {!roomData
           ? rooms.map((current) => (
@@ -293,7 +298,8 @@ const HomePanel = () => {
                 key={current.id}
                 name={current.name}
                 players={current.players}
-                handleJoin={() => joinRoom(current.id)}
+                inGame={current.inGame}
+                handleJoin={(password) => {if(!current.inGame) joinRoom(current.id, password)}}
               />
             ))
           : undefined}

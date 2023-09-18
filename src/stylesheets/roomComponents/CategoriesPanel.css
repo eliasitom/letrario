@@ -1,6 +1,7 @@
 
 .categories-panel {
     width: 90%;
+    margin-top: 10px;
 
     display: flex;
     justify-content: center;
@@ -19,6 +20,7 @@
 
     display: flex;
     justify-content: center;
+    align-items: center;
     flex-direction: row;
 }
 
@@ -30,11 +32,36 @@
     border: 1px solid black;
     border-radius: 20px;
 }
+.categories-panel form div {
+    width: 180px;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+}
 .categories-panel button {
     width: 120px;
     height: 25px;
+    margin: 0;
     margin-left: 10px;
 
     border: 1px solid black;
     border-radius: 20px;
 }
+
+@media only screen and (max-width: 720px) {
+    .categories-panel form {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+    }
+    .categories-panel input, .categories-panel button {
+        width: 80%;
+    }
+    .categories-panel button {
+        width: 80%;
+        margin-top: 5px;
+    }
+  }

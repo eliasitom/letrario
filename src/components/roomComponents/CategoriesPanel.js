@@ -27,7 +27,7 @@ const CategoriesPanel = ({categorySubmited, roomId, nickname, socket}) => {
     <h3>Send a category!</h3>
     <form onSubmit={sendCategory}>
       <input placeholder="Example: countries..." onChange={e => setCategory(e.target.value)} value={category}/>
-      <button>send</button>
+      <div><button>send</button></div>
     </form>
   </div>;
 };

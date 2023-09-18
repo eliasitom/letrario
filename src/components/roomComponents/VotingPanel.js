@@ -189,6 +189,10 @@ const VotingPanel = ({ words, categories, nickname }) => {
           </div>
         </div>
       ))}
+      <div className="confirm-feedback">
+        <p>you are ready?</p>
+        <BiLike />
+      </div>
     </div>
   );
 };
