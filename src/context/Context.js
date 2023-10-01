@@ -13,6 +13,12 @@ export const ContextProvider = ({ children }) => {
   const [c_nickname, c_setNickname] = useState("");
   const [c_wordsAndCategories, c_setWordsAndCategories] = useState(null);
 
+
+  useEffect(()=> {
+    socket.on("endGame", () => {
+      c_setWordsAndCategories(null);
+    })
+  }, [])
   
   return (
     <Context.Provider

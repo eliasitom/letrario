@@ -1,6 +1,7 @@
 require("./database");
 const Room = require("./models/roomSchema");
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
+const premadeCategories = require("./categories.json").categories;
 
 const express = require("express");
 const cors = require("cors");
@@ -23,14 +24,21 @@ app.use(express.json());
 
 //Functions
 
-function createRoom(id, password, admin, name) {
-  const newRoom = new Room({
+async function createRoom(id, password, admin, name) {
+  let unorderedCategories = premadeCategories;
+  unorderedCategories = unorderedCategories.sort(() => Math.random() - 0.5);
+
+  const newRoom = await new Room({
     id,
     name,
     password,
     admin,
     players: [admin],
+    playersVotes: [{ name: admin, votes: 0 }],
+    premadeCategories: unorderedCategories,
   }).save();
+
+  return true;
 }
 
 //End points
@@ -81,26 +89,29 @@ app.post("/api/send_category", (req, res) => {
 io.on("connection", (socket) => {
   console.log("client connected");
 
-  socket.on("createRoom", (data) => {
-    socket.join(data.id);
-    io.to(data.id).emit("join", data);
+  socket.on("createRoom", async (data) => {
+    await socket.join(data.id);
 
-    createRoom(data.id, data.password, data.admin, data.name);
-
-    console.log(`${data.admin} created a new room. id: ${data.id}`);
+    await createRoom(data.id, data.password, data.admin, data.name);
   });
 
   socket.on("joinRoom", async (data) => {
     const room = await Room.findOne({ id: data.id });
 
     if (room.password === data.password) {
-      socket.join(data.id);
+      if(!room.players.includes(data.player)) {
+        socket.join(data.id);
 
-      room.players.push(data.player);
-      await room.save();
-
-      io.to(data.id).emit("roomUpdated", data.id);
-      console.log(`${data.player} join game.`);
+        room.players.push(data.player);
+        room.playersVotes.push({ name: data.player, votes: 0 });
+  
+        await room.save();
+        io.to(data.id).emit("roomUpdated", data.id);
+      } else {
+        io.to(socket.id).emit("accessDenied", "duplicate nickname")
+      }
+    } else {
+      io.to(socket.id).emit("accessDenied", "incorrect password")
     }
   });
 
@@ -126,10 +137,39 @@ io.on("connection", (socket) => {
   });
 
   socket.on("gameStarted", async (roomId) => {
-    await Room.findOneAndUpdate({id: roomId}, {inGame: true})
-    io.to(roomId).emit("roomUpdated", roomId)
-    
-    
+    await Room.findOneAndUpdate({ id: roomId }, { inGame: true });
+    io.to(roomId).emit("roomUpdated", roomId);
+
+    ////////
+
+    const room = await Room.findOne({ id: roomId });
+
+    var premadeCategoriesLots = [];
+    var counter = 0;
+
+    for (var i = 0; i < room.players.length; i++) {
+      var player = room.players[i];
+      var assignedCategories = [];
+
+      for (
+        var j = counter;
+        j < counter + 6 && j < room.premadeCategories.length;
+        j++
+      ) {
+        assignedCategories.push(room.premadeCategories[j]);
+      }
+
+      premadeCategoriesLots.push({
+        player: player,
+        categories: assignedCategories,
+      });
+      counter += 6;
+    }
+
+    io.to(roomId).emit("categoriesLots", premadeCategoriesLots);
+
+    ////////
+
     let timer = 5;
 
     const number = setInterval(() => {
@@ -215,25 +255,33 @@ io.on("connection", (socket) => {
     io.to(data.roomId).emit("letterSelected", data.letter);
   });
 
-  socket.on("startWritingTimer", (data) => {
+  socket.on("startWritingTimer", async (data) => {
+    console.log("start writing timer...")
+
     //Error a solucionar: después del primer turno (luego de seleccionar categorias), el segundo cliente en la ronda llama dos veces a este listener
     const { roomId, player } = data;
 
     //Esto es para filtar errores, ya que a veces un cliente llama a este listener con player = undefined
     if (player === undefined) return;
 
-    let timer = 9999;
+    const room_ = await Room.findOne({ id: roomId });
+    let timer = room_.settings.roundTime;
 
-    const number = setInterval(() => {
-      io.to(roomId).emit("writingTimer", {
-        timer_: timer,
-        roomId: roomId,
-      });
-      timer--;
-
+    let intervalRef = setInterval(() => {
       Room.findOne({ id: roomId }).then((room) => {
-        if (timer == -1 || room.turnOf != player) {
-          clearInterval(number);
+        if ((room && room.turnOf != player) || !room || timer == -1) {
+          clearInterval(intervalRef);
+        } else if (timer > -1 && room && room.turnOf == player) {
+          io.to(roomId).emit("writingTimer", {
+            timer_: timer,
+            roomId: roomId,
+            player: player,
+            turnOf: room_.turnOf,
+            category: room_.currentCategory,
+            syncTurnOf: room.turnOf,
+            syncCategory: room.currentCategory 
+          });
+          timer--;
         }
       });
     }, 1000);
@@ -289,7 +337,7 @@ io.on("connection", (socket) => {
     io.to(data.roomId).emit("roomUpdated", data.roomId);
   });
 
-  // socket.on("approveAnswer", async (data) => {    
+  // socket.on("approveAnswer", async (data) => {
 
   //   Room.findOneAndUpdate({words: {$elemMatch: {_id: data.word._id}}}, {$push: {"words.$[elem].likes": data.player}}, {arrayFilters: [{"elem._id": data.word._id}]})
   //   .then((room) => {
@@ -298,46 +346,124 @@ io.on("connection", (socket) => {
   //   .catch(err => console.log(err))
   // });
 
-  socket.on("approveAnswer", async (data) => { 
-    const { word, player } = data;   
+  socket.on("approveAnswer", async (data) => {
+    const { word, player } = data;
 
-    let room = await Room.findOne({words: {$elemMatch: {_id: word._id}}})
-    let currentWord = await room.words.find(current => current._id == word._id);
-    
-    if(!currentWord.likes.includes(player)) {
+    let room = await Room.findOne({ words: { $elemMatch: { _id: word._id } } });
+    let currentWord = await room.words.find(
+      (current) => current._id == word._id
+    );
+
+    if (!currentWord.likes.includes(player)) {
       currentWord.likes.push(player);
-              
-      if(currentWord.dislikes.includes(player)) {
-        currentWord.dislikes = currentWord.dislikes.filter(current => current !== player);
+
+      let playerVotes = room.playersVotes.find(
+        (current) => current.name === word.origin
+      );
+      playerVotes.votes++;
+
+      if (currentWord.dislikes.includes(player)) {
+        //Esto se hace para evitar que un voto sea anulado cuando le damos like y luego dislike o viceversa.
+        playerVotes.votes++;
+
+        currentWord.dislikes = currentWord.dislikes.filter(
+          (current) => current !== player
+        );
       }
     }
-    
-    room.markModified('words'); // le decimos a mongoose que el campo words ha cambiado
+
+    //room.markModified('words'); // le decimos a mongoose que el campo words ha cambiado
     await room.save();
-    
-    socket.to(room.id).emit("approveAnswer", {origin: data.player, word: data.word})
+
+    socket
+      .to(room.id)
+      .emit("approveAnswer", { origin: data.player, word: data.word });
   });
 
-  socket.on("disapproveAnswer", async (data) => { 
-    const { word, player } = data;   
+  socket.on("disapproveAnswer", async (data) => {
+    const { word, player } = data;
 
-    let room = await Room.findOne({words: {$elemMatch: {_id: word._id}}})
-    let currentWord = await room.words.find(current => current._id == word._id);
-    
-    if(!currentWord.dislikes.includes(player)) {
+    let room = await Room.findOne({ words: { $elemMatch: { _id: word._id } } });
+    let currentWord = await room.words.find(
+      (current) => current._id == word._id
+    );
+
+    if (!currentWord.dislikes.includes(player)) {
       currentWord.dislikes.push(player);
-              
-      if(currentWord.likes.includes(player)) {
-        currentWord.likes = currentWord.likes.filter(current => current !== player);
+
+      let playerVotes = room.playersVotes.find(
+        (current) => current.name === word.origin
+      );
+      playerVotes.votes--;
+
+      if (currentWord.likes.includes(player)) {
+        //Esto se hace para evitar que un voto sea anulado cuando le damos like y luego dislike o viceversa.
+        playerVotes.votes--;
+
+        currentWord.likes = currentWord.likes.filter(
+          (current) => current !== player
+        );
       }
     }
-    
-    room.markModified('words'); // le decimos a mongoose que el campo words ha cambiado
-    await room.save(); 
-    
-    socket.to(room.id).emit("disapproveAnswer", {origin: data.player, word: data.word})
+
+    //room.markModified('words'); // le decimos a mongoose que el campo words ha cambiado
+    await room.save();
+
+    socket
+      .to(room.id)
+      .emit("disapproveAnswer", { origin: data.player, word: data.word });
   });
 
+  socket.on("readyPlayer", async (data) => {
+    const { word, player } = data;
+
+    let room = await Room.findOne({ words: { $elemMatch: { _id: word._id } } });
+
+    io.to(room.id).emit("readyPlayer", player);
+  });
+
+  socket.on("showWinner", async (data) => {
+    const { word } = data;
+
+    let room = await Room.findOne({ words: { $elemMatch: { _id: word._id } } });
+
+    io.to(room.id).emit("showWinner", room.playersVotes);
+  });
+
+  socket.on("endGame", async (roomId) => {
+    let room = await Room.findOne({ id: roomId });
+
+    room.turnOf = "";
+    room.categories = [];
+    room.words = [];
+    room.inGame = false;
+    room.lettersNotAvailable = [];
+    room.currentCategory = "";
+    room.playersVotes = room.playersVotes.map((current) => {
+      current.votes = 0;
+      return current;
+    });
+
+    await room.save();
+
+    io.to(roomId).emit("endGame", roomId);
+  });
+
+  socket.on("message", (data) => {
+    const { roomId, message } = data;
+
+    io.to(roomId).emit("message", message);
+  });
+
+  socket.on("changeRoundTime", async (data) => {
+    const { roomId, roundTime } = data;
+
+    const room = await Room.findOne({ id: roomId });
+    room.settings.roundTime = roundTime;
+    await room.save();
+
+    socket.to(roomId).emit("roomUpdated", roomId);
+  });
 });
 
 server.listen(8000, () => {

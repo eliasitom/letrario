@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import "../../stylesheets/roomComponents/PlayablePanel.css";
 
-
 const PlayablePanel = ({ roomData, nickname, socket, waitingPlayersC }) => {
   const [allLetters, setAllLetters] = useState([
     { letter: "a", enabled: true },
@@ -37,29 +36,27 @@ const PlayablePanel = ({ roomData, nickname, socket, waitingPlayersC }) => {
 
   const [currentLetter, setCurrentLetter] = useState("");
   const [playerCurrentL, setPlayerCurrentL] = useState(""); //Player current letter...
-  const [writingTimer, setWritingTimer] = useState(-1);
+  const [writingTimer, setWritingTimer] = useState(
+    roomData.settings.roundTimer
+  );
 
-  const [responseAlert, setResponseAlert] = useState('');
+  const [responseAlert, setResponseAlert] = useState("");
 
-
-
-
-
-
+  
 
   const responseAlert_ = (alert) => {
-    setResponseAlert(alert)
-    
+    setResponseAlert(alert);
+
     let timer = 2;
     const number = setInterval(() => {
-        timer--;
+      timer--;
 
-        if(timer === 0) {
-          setResponseAlert('');
-          clearInterval(number);
-        }
+      if (timer === 0) {
+        setResponseAlert("");
+        clearInterval(number);
+      }
     }, 1000);
-  }
+  };
 
   const setMyResponse_ = (e) => {
     for (const letter of allLetters) {
@@ -68,17 +65,20 @@ const PlayablePanel = ({ roomData, nickname, socket, waitingPlayersC }) => {
         myResponse.length > 0
       ) {
         setMyResponse(e);
-      } else if (myResponse.length === 0 && !letter.enabled && letter.letter === e) {
-        responseAlert_('someone has already used this letter!');
-      } 
+      } else if (
+        myResponse.length === 0 &&
+        !letter.enabled &&
+        letter.letter === e
+      ) {
+        responseAlert_("someone has already used this letter!");
+      }
     }
   };
 
   const letterSelected = (letter) => {
     socket.emit("letterSelected", { letter, roomId: roomData.id });
     setCurrentLetter(letter);
-
-    setMyResponse(letter)
+    setMyResponse(letter);
   };
 
   const submitWord = (e) => {
@@ -88,6 +88,8 @@ const PlayablePanel = ({ roomData, nickname, socket, waitingPlayersC }) => {
 
     if (currentLetter && myResponse) {
       setCurrentLetter("");
+      setMyResponse("");
+      setWritingTimer(roomData.settings.roundTimer);
 
       const response = {
         word: myResponse,
@@ -97,7 +99,6 @@ const PlayablePanel = ({ roomData, nickname, socket, waitingPlayersC }) => {
       };
 
       socket.emit("submitWord", { response, roomId: roomData.id });
-      socket.emit("stopWritingTimer");
     } else if (!currentLetter) {
       alert("Don't forget to select a letter!");
     } else if (!myResponse) {
@@ -132,12 +133,37 @@ const PlayablePanel = ({ roomData, nickname, socket, waitingPlayersC }) => {
     });
 
     socket.on("writingTimer", (data) => {
-      const { timer_ } = data;
+      const { timer_, player, turnOf, category, syncTurnOf, syncCategory } = data;
 
-      setWritingTimer(timer_);
+      if (turnOf === nickname && player === nickname) {
+        setWritingTimer(timer_);
+      }
+      if (
+        !currentLetter &&
+        timer_ === 0 &&
+        turnOf === nickname &&
+        player === nickname
+      ) {
+        console.log(`%cTimer: ${timer_}`, "color:green");
+        for (let i = 0; i < allLetters.length; i++) {
+          if (allLetters[i].enabled) {
+            const letter = allLetters[i].letter;
 
-      if (timer_ === 0) {
-        submitWord();
+            const response = {
+              word: myResponse,
+              letter: letter,
+              origin: nickname,
+              category: category,
+            };
+
+            setCurrentLetter("");
+            setMyResponse("");
+            setWritingTimer(roomData.settings.roundTimer);
+
+            socket.emit("submitWord", { response, roomId: roomData.id });
+            break;
+          }
+        }
       }
     });
 
@@ -166,14 +192,15 @@ const PlayablePanel = ({ roomData, nickname, socket, waitingPlayersC }) => {
       !roomData.lettersNotAvailable.includes(myResponse)
     ) {
       letterSelected(myResponse);
-    } else if(myResponse.length === 1 && 
+    } else if (
+      myResponse.length === 1 &&
       roomData.lettersNotAvailable.includes(myResponse)
-      ) {
-        setMyResponse('');
-        letterSelected('');
-        responseAlert_('someone has already used this letter!');
+    ) {
+      setMyResponse("");
+      letterSelected("");
+      responseAlert_("someone has already used this letter!");
     } else if (myResponse.length === 0) {
-      letterSelected('');
+      letterSelected("");
     }
 
     socket.emit("playerWriting", { myResponse, roomId: roomData.id });
@@ -182,21 +209,23 @@ const PlayablePanel = ({ roomData, nickname, socket, waitingPlayersC }) => {
   return (
     <div className="room-container">
       <div className="letters-div">
-        { 
-        !waitingPlayersC ?
-          allLetters.map((current) => (
+        {!waitingPlayersC
+          ? allLetters.map((current) => (
               <p
                 onClick={() =>
-                  current.enabled && roomData.turnOf === nickname ? letterSelected(current.letter) : undefined
+                  current.enabled && roomData.turnOf === nickname
+                    ? letterSelected(current.letter)
+                    : undefined
                 }
                 className={`${!current.enabled ? "disabled" : "letter"} ${
                   current.letter === currentLetter ? "current-letter" : ""
                 }`}
+                key={current.letter}
               >
                 {current.letter}
               </p>
             ))
-           : undefined }
+          : undefined}
       </div>
 
       {waitingPlayersC ? (
@@ -223,7 +252,8 @@ const PlayablePanel = ({ roomData, nickname, socket, waitingPlayersC }) => {
           <h4>
             <span>{roomData.turnOf}</span> is writing{" "}
             <span>{roomData.currentCategory}</span> with the letter{" "}
-            <span style={{textTransform: 'uppercase'}}>{playerCurrentL}</span>:
+            <span style={{ textTransform: "uppercase" }}>{playerCurrentL}</span>
+            :
           </h4>
           <p>{playerResponse}</p>
         </div>

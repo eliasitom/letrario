@@ -1,44 +1,46 @@
-const { Schema, model, isObjectIdOrHexString } = require('mongoose')
+const { Schema, model, isObjectIdOrHexString } = require("mongoose");
 
 const roomSchema = new Schema({
   id: {
     type: String,
     required: true, //Esto es para que el dato sea requerido
-    unique: true //Esto es para que el dato sea unico
+    unique: true, //Esto es para que el dato sea unico
   },
   name: {
-    type: String
+    type: String,
   },
   admin: {
     type: String,
     required: true,
   },
-  players: [
-    String
+  players: [String],
+  playersVotes: [
+    {
+      name: String,
+      votes: Number,
+    },
   ],
   inGame: {
     type: Boolean,
-    default: false
+    default: false,
   },
   turnOf: {
-    type: String
+    type: String,
   },
   password: {
-    type: String
+    type: String,
   },
-  lettersNotAvailable: [
-    String
-  ],
+  lettersNotAvailable: [String],
   categories: [
     {
       origin: String,
       letter: String,
       finished: Boolean,
-      category: String
-    }
+      category: String,
+    },
   ],
   currentCategory: {
-    type: String
+    type: String,
   },
   words: [
     {
@@ -47,9 +49,16 @@ const roomSchema = new Schema({
       origin: String,
       category: String,
       likes: [],
-      dislikes: []
-    }
-  ]
-})
+      dislikes: [],
+    },
+  ],
+  settings: {
+    roundTime: {
+      type: Number,
+      default: 15,
+    },
+  },
+  premadeCategories: [String]
+});
 
-module.exports = model('room', roomSchema)
+module.exports = model("room", roomSchema);

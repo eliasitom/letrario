@@ -1,0 +1,176 @@
+.chat-panel-main {
+  width: 30%;
+  margin-left: 20px;
+}
+
+.chat-panel {
+  background-color: var(--color-1);
+  border-radius: 20px;
+  border: solid black 2px;
+  box-shadow: -2px 3px 1px black;
+
+  height: 400px;
+
+}
+
+.chat-panel h2 {
+  height: 10%;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.messages-container {
+  height: 70%;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+
+  overflow-y: scroll;
+  overflow-x: hidden;
+}
+.messages-container::-webkit-scrollbar {
+  background-color: rgba(0, 0, 0, 0.088);
+
+  border-radius: 50px;
+}
+.messages-container::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.212);
+
+  border-radius: 50px;
+}
+
+.message {
+  background-color: rgba(0, 0, 0, 0.088);
+  border-radius: 20px;
+
+  width: 90%;
+  margin: 3px 20px 3px 0;
+  padding: 5px 0 5px 0;
+}
+.message h4, .message p {
+  width: 100%;
+  margin-left: 10px;
+  text-align: left;
+}
+
+.message-by-me {
+  background-color: rgba(0, 0, 0, 0.088);
+  border-radius: 20px;
+
+  width: 90%;
+  margin: 3px 0 3px 20px;
+  padding: 5px 0 5px 0;
+}
+.message-by-me h4, .message-by-me p {
+  width: 100%;
+  margin-left: 10px;
+  text-align: left;
+}
+
+.message p, .message-by-me p  {
+  word-wrap: break-word;
+
+  width: 95%;
+}
+
+
+.chat-panel form {
+  height: 20%;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.chat-panel form input {
+  width: 90%;
+}
+.chat-panel form button {
+  border: 1px solid black;
+  height: 29px;
+}
+
+/* <div className="chat-panel">
+<h1>chat panel</h1>
+<div className="messages-container">
+
+</div>
+<form>
+  <input placeholder="send a message..."/>
+  <button>send</button>
+</form>
+</div> */
+
+/* PLAYERS LIST */
+
+.room-players-list {
+  background-color: var(--color-1);
+  box-shadow: -2px 3px 1px black;
+  border: solid black 2px;
+  border-radius: 20px;
+
+  min-height: 300px;
+  margin: 20px 0 40px 0;
+}
+.players-container {
+  margin-top: 10px;
+}
+.player-list-item h3 {
+  margin: 0 !important;
+}
+.player-list-item {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.player-list-item p {
+  font-weight: bold;
+  margin: 3px 0 3px 0;
+  padding: 3px 15px 3px 15px;
+
+  background-color: var(--color-1);
+  box-shadow: -1px 2px 1px black;
+  border: solid black 2px;
+  border-radius: 20px;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.player-list-item svg {
+  margin-left: 5px;
+}
+.you-turn {
+  background-color: var(--color-2) !important;
+}
+
+.home-room-id-div {
+  margin-top: 10px;
+  
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+}
+
+.home-room-id-div p {
+  padding-top: 5px;
+  margin-top: 10px;
+
+  border-top: 2px solid black;
+  color: rgba(0, 0, 0, 0.664);
+}
+
+
+@media only screen and (max-width: 800px) {
+  .chat-panel-main {
+    justify-content: center;
+    align-items: center;
+
+    width: 100%;
+    margin: 0;
+    margin-top: 20px;
+  }
+}

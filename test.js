@@ -1,55 +1,24 @@
-const words = [
-    {
-      origin: "Eliasito",
-      category: "names"
-    },
-    {
-      origin: "Danielito",
-      category: "names"
-    },
-    {
-      origin: "Eliasito",
-      category: "countries"
-    },
-    {
-      origin: "Danielito",
-      category: "countries"
+function asignarPaises(personas, paises) {
+  var nuevoArray = [];
+  var contador = 0;
+
+  for (var i = 0; i < personas.length; i++) {
+    var persona = personas[i];
+    var paisesAsignados = [];
+
+    for (var j = contador; j < contador + 3 && j < paises.length; j++) {
+      paisesAsignados.push(paises[j]);
     }
-]
-const categories = [{category: "names", finished: true}, {category: "countries", finished: true}]
 
-function orderedCategories() {
-  const categories_ = categories.map(obj => {return obj.category});
-  
-  switch (categories_.length) {
-    case 2:
-      var category0 = words.filter((word) => word.category == categories_[0]); // filtramos los elementos con category 1
-      var category1 = words.filter((word) => word.category == categories_[1]); // filtramos los elementos con category 2
-
-      var orderedCategories = [...[category0], ...[category1]]; // usamos el operador spread para unir los arrays en uno nuevo
-      console.log('case 2:')
-      console.log(orderedCategories)
-      break;
-    case 3:
-      var category0 = words.filter((word) => word.category == categories_[0]); // filtramos los elementos con category 1
-      var category1 = words.filter((word) => word.category == categories_[1]); // filtramos los elementos con category 2
-      var category2 = words.filter((word) => word.category == categories_[2]); // filtramos los elementos con category 3
-
-      var orderedCategories = [...[category0], ...[category1], ...[category2]]; // usamos el operador spread para unir los arrays en uno nuevo
-      console.log('case 3:')
-      console.log(orderedCategories)
-      break;
-    case 4:
-      var category0 = words.filter((word) => word.category == categories_[0]); // filtramos los elementos con category 1
-      var category1 = words.filter((word) => word.category == categories_[1]); // filtramos los elementos con category 2
-      var category2 = words.filter((word) => word.category == categories_[2]); // filtramos los elementos con category 3
-      var category3 = words.filter((word) => word.category == categories_[3]); // filtramos los elementos con category 4
-
-      var orderedCategories = [...[category0], ...[category1], ...[category2], ...[category3]]; // usamos el operador spread para unir los arrays en uno nuevo
-      console.log('case 4:')
-      console.log(orderedCategories)
-      break;
+    nuevoArray.push({ nombre: persona, paises: paisesAsignados });
+    contador += 3;
   }
+
+  return nuevoArray;
 }
 
-orderedCategories();
+var paises = ["Uruguay", "Argentina", "Brasil", "Chile", "Perú", "Colombia", "Ecuador", "Canada", "Cosa Rica", "Japon", "Corea del Norte", "Corea del Sur", "Suiza", "Suecia", "Noruega"];
+var personas = ["Juan", "María", "Carlos"];
+
+var resultado = asignarPaises(personas, paises);
+console.log(resultado);

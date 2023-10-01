@@ -1,0 +1,40 @@
+
+
+.winner-panel {
+    width: 100%;
+    margin-top: 20px;
+}
+.podium-items-container {
+    width: 100%;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+}
+.podium-item {
+    background-color: var(--color-1);
+    box-shadow: -2px 3px 1px black;
+    border: solid black 2px;
+    border-radius: 50px;
+
+    width: 40%;
+    height: 70px;
+    margin: 10px 0 10px 0;
+    padding: 5px 0 5px 0;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+}
+.podium-position {
+    color: rgba(0, 0, 0, 0.459);
+
+}
+
+@media only screen and (max-width: 1150px) {
+    .podium-item {    
+        width: 90%;
+    }
+  }

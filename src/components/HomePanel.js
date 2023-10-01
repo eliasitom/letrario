@@ -1,5 +1,6 @@
 import "../stylesheets/HomePanel.css";
 
+import { BsFillDice3Fill } from "react-icons/bs";
 import { v4 as uuidv4 } from "uuid";
 import { useContext, useEffect, useState } from "react";
 
@@ -8,10 +9,14 @@ import PlayablePanel from "./roomComponents/PlayablePanel";
 import GameTimer from "./roomComponents/GameTimer";
 import RoomCard from "./RoomCard";
 import VotingPanel from "./roomComponents/VotingPanel";
-
-import { BiSolidCrown } from 'react-icons/bi';
+import ChatPanel from "./roomComponents/ChatPanel";
+import SettingsPanel from "./roomComponents/SettingsPanel";
+import WinnerPanel from "./roomComponents/WinnerPanel";
 
 import { Context, ContextProvider } from "../context/Context";
+
+const premadeNicknames = require("../nicknames.json").premadeNicknames;
+const premadeRoomNames = require("../roomNames.json").premadeRoomNames;
 
 const HomePanel = () => {
   const [nickname, setNickname] = useState("");
@@ -34,6 +39,8 @@ const HomePanel = () => {
   const [categorySubmited, setCategorySubmited] = useState(false);
   const [waitingPlayersC, setWaitingPlayersC] = useState(true); //Esperando categorias de jugadores...
   const [categoriesReadyT, setCategoriesReadyT] = useState(0); //Categorias listas temporizador...
+  const [podium, setPodium] = useState([]);
+  const [premadeCategories, setPremadeCategories] = useState([]);
 
   const {
     c_wordsAndCategories,
@@ -43,33 +50,51 @@ const HomePanel = () => {
     c_setRoomId,
   } = useContext(Context);
 
+  const getRandomNickname = () => {
+    setNickname(
+      premadeNicknames[Math.floor(Math.random() * premadeNicknames.length)]
+    );
+  };
+  const getRandomRoomName = () => {
+    setHostName(
+      premadeRoomNames[Math.floor(Math.random() * premadeRoomNames.length)]
+    );
+  };
+
   const createRoom = (e) => {
     e.preventDefault();
 
-    const data = {
-      id: uuidv4(),
-      name: hostName,
-      admin: nickname,
-      password: hostPassword,
-      players: [nickname],
-      lettersNotAvailable: [],
-      answers: [],
-    };
-
-    socket.emit("createRoom", data);
-
-    setRoomData(data);
+    if(hostName && nickname) {
+      const data = {
+        id: uuidv4(),
+        name: hostName,
+        admin: nickname,
+        password: hostPassword,
+        players: [nickname],
+        lettersNotAvailable: [],
+        answers: [],
+      };
+  
+      socket.emit("createRoom", data);
+  
+      setRoomData(data);
+    } else {
+      alert("do you need a nickname and room name to create a room!");
+    }
   };
 
   const joinRoom = (guestId_, password_) => {
-    if (guestId_) {
+    if (guestId_ && nickname) {
       socket.emit("joinRoom", {
         player: nickname,
         id: guestId_,
-        password: password_ ? password_ : guestPassword ? guestPassword : '',
+        password: password_ ? password_ : guestPassword ? guestPassword : "",
       });
+
       setGuestId("");
       setGuestPassword("");
+    } else {
+      alert("do you need a nickname and room ID to join a room");
     }
   };
 
@@ -83,6 +108,7 @@ const HomePanel = () => {
   };
 
   const getRoom = (roomId_) => {
+    console.log('getRoom...')
     fetch("http://localhost:8000/api/get_room", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -112,10 +138,19 @@ const HomePanel = () => {
   };
 
   const startGame = () => {
-    socket.emit("gameStarted", roomData.id);
+    if (roomData.players.length > 1) {
+      socket.emit("gameStarted", roomData.id);
+    }
   };
 
   useEffect(() => {
+    socket.on("accessDenied", data => {
+      if(data === 'duplicate nickname') {
+        alert('There is already a player with this nickname! try with another.')
+      } else if(data === "incorrect password") {
+        alert("incorrect password! try again")
+      }
+    })
     socket.on("roomUpdated", (roomId_) => {
       getRoom(roomId_);
     });
@@ -123,6 +158,10 @@ const HomePanel = () => {
     socket.on("roomClosed", () => {
       alert("¡la sala ha sido cerrada!");
       setRoomData(null);
+    });
+
+    socket.on("categoriesLots", (data) => {
+      setPremadeCategories(data);
     });
 
     socket.on("timer", (timer_) => {
@@ -136,9 +175,6 @@ const HomePanel = () => {
     socket.on("allCategoriesReady", (data) => {
       getRoom(data.roomId);
       setWaitingPlayersC(false);
-      console.log(
-        `all categories ready! The initial player is ${data.initialPlayer}`
-      );
     });
 
     socket.on("categoriesReadyTimer", (data) => {
@@ -150,18 +186,29 @@ const HomePanel = () => {
         getRoom(roomId);
       }
     });
-
+    
     socket.on("nextTurn", () => {
       getRoom(roomData.id);
     });
 
-    socket.on("nextPlayer", (roomId_) => {
-      getRoom(roomId_);
-      socket.emit("startWritingTimer", roomId_);
-    });
-
     socket.on("gameFinished", (data) => {
       c_setWordsAndCategories(data);
+    });
+
+    socket.on("showWinner", (data) => {
+      const newPodium = [...data].sort((a, b) => b.votes - a.votes);
+      setPodium(newPodium);
+    });
+
+    socket.on("endGame", (roomId) => {
+      getRoom(roomId);
+
+      setTimer(0);
+      setCategoriesPanel(false);
+      setCategorySubmited(false);
+      setWaitingPlayersC(true);
+      setCategoriesReadyT(0);
+      setPodium([]);
     });
   }, []);
 
@@ -176,20 +223,31 @@ const HomePanel = () => {
   return (
     <ContextProvider>
       <div className="home-panel">
-        <h1 className="home-title">{!roomData ? "LETRARIO" : roomData.name}</h1>
+        <h1 className="home-title">{!roomData ? "LETRARIO" : undefined}</h1>
         {!roomData ? (
           <div>
             <form className="nickname-form card">
               <label>put your nickname!</label>
-              <input
-                placeholder="nickname..."
-                onChange={(e) => {
-                  setNickname(e.target.value);
-                }}
-                value={nickname}
-              />
+              <div className="nickname-form-input">
+                <input
+                  placeholder="nickname..."
+                  onChange={(e) => {
+                    setNickname(e.target.value);
+                  }}
+                  value={nickname}
+                />
+                <div className="dice">
+                  <BsFillDice3Fill onClick={getRandomNickname} />
+                </div>
+              </div>
             </form>
-            <form className="card" onSubmit={(e) => {joinRoom(guestId); e.preventDefault()}}>
+            <form
+              className="card"
+              onSubmit={(e) => {
+                joinRoom(guestId);
+                e.preventDefault();
+              }}
+            >
               <label>join room</label>
               <input
                 placeholder="room id..."
@@ -206,11 +264,16 @@ const HomePanel = () => {
             </form>
             <form className="card" onSubmit={createRoom}>
               <label>create room</label>
-              <input
-                placeholder="room name..."
-                onChange={(e) => setHostName(e.target.value)}
-                value={hostName}
-              />
+              <div className="create-room-name-input">
+                <input
+                  placeholder="room name..."
+                  onChange={(e) => setHostName(e.target.value)}
+                  value={hostName}
+                />
+                <div className="dice">
+                  <BsFillDice3Fill onClick={getRandomRoomName} />
+                </div>
+              </div>
               <input
                 type="password"
                 placeholder="room password..."
@@ -221,76 +284,76 @@ const HomePanel = () => {
             </form>
           </div>
         ) : (
-          <div className="home-room">
-            {
-              !roomData.inGame ? 
-              <p className="room-subtitle">Finding the right letter is finding the right word! Don't leave, Letrario is about to start!</p>
-              : undefined
-            }
-            {!c_wordsAndCategories ? (
-              <>
-                {timer > 1 ? (
-                  <GameTimer timer={timer} type={"startGame"} />
-                ) : categoriesPanel ? (
-                  <CategoriesPanel
-                    roomId={roomData.id}
-                    nickname={nickname}
-                    socket={socket}
-                    categorySubmited={() => {
-                      setCategorySubmited(true);
-                      setCategoriesPanel(false);
-                    }}
-                  />
-                ) : categoriesReadyT > 0 ? (
-                  <GameTimer type="categoriesReady" timer={categoriesReadyT} />
-                ) : categorySubmited ? (
-                  <PlayablePanel
-                    nickname={nickname}
-                    roomData={roomData}
-                    socket={socket}
-                    waitingPlayersC={waitingPlayersC}
-                    getRoom={getRoom}
-                  />
-                ) : undefined}
+          <div className="home-room-main">
+            <div className="home-room">
+              {!roomData.inGame ? (
+                <>
+                  <p className="room-subtitle">
+                    Finding the right letter is finding the right word! Don't
+                    leave, Letrario is about to start!
+                  </p>
+                  {roomData.admin === nickname ? (
+                    <SettingsPanel socket={socket} roomData={roomData} />
+                  ) : undefined}
+                </>
+              ) : undefined}
+              {!c_wordsAndCategories ? (
+                <>
+                  {timer > 1 ? (
+                    <GameTimer timer={timer} type={"startGame"} />
+                  ) : categoriesPanel ? (
+                    <CategoriesPanel
+                      roomId={roomData.id}
+                      nickname={nickname}
+                      socket={socket}
+                      categorySubmited={() => {
+                        setCategorySubmited(true);
+                        setCategoriesPanel(false);
+                      }}
+                      premadeCategories={premadeCategories}
+                    />
+                  ) : categoriesReadyT > 0 ? (
+                    <GameTimer
+                      type="categoriesReady"
+                      timer={categoriesReadyT}
+                    />
+                  ) : categorySubmited ? (
+                    <PlayablePanel
+                      nickname={nickname}
+                      roomData={roomData}
+                      socket={socket}
+                      waitingPlayersC={waitingPlayersC}
+                    />
+                  ) : undefined}
 
-                {roomData.admin === nickname && !roomData.inGame ? (
-                  <button className="start-button" onClick={startGame}>
-                    start game
-                  </button>
-                ) : undefined}
-              </>
-            ) : (
-              <VotingPanel
-                nickname={nickname}
-                words={c_wordsAndCategories.words}
-                categories={c_wordsAndCategories.categories}
-              />
-            )}
+                  {roomData.admin === nickname && !roomData.inGame ? (
+                    <button className="start-button" onClick={startGame}>
+                      start game
+                    </button>
+                  ) : undefined}
+                </>
+              ) : podium.length === 0 ? (
+                <VotingPanel
+                  nickname={nickname}
+                  words={c_wordsAndCategories.words}
+                  categories={c_wordsAndCategories.categories}
+                  roomData={roomData}
+                />
+              ) : (
+                <WinnerPanel
+                  podium={podium}
+                  roomId={roomData.id}
+                  admin={nickname === roomData.admin}
+                />
+              )}
+            </div>
+            <ChatPanel
+              leaveRoom={leaveRoom}
+              roomData={roomData}
+              nickname={nickname}
+            />
           </div>
         )}
-        {roomData ? (
-          <div className="room-players-list">
-            <h3>current players {"(" + roomData.players.length + "/4)"}:</h3>
-            {roomData.players.map((player) => (
-              <p
-                className={`player-list-item ${roomData.turnOf === player ? "you-turn" : ""}`}
-                key={player}
-              >
-                {player}
-                {
-                  roomData.admin === player ?
-                  <BiSolidCrown /> :
-                  undefined
-                }
-              </p>
-            ))}
-            <div className="home-room-id-div">
-              <p>Share this ID with your friends:</p>
-              <h5>{roomData.id}</h5>
-            </div>
-            <button onClick={leaveRoom}>leave</button>
-          </div>
-        ) : undefined}
 
         {!roomData
           ? rooms.map((current) => (
@@ -299,7 +362,9 @@ const HomePanel = () => {
                 name={current.name}
                 players={current.players}
                 inGame={current.inGame}
-                handleJoin={(password) => {if(!current.inGame) joinRoom(current.id, password)}}
+                handleJoin={(password) => {
+                  if (!current.inGame) joinRoom(current.id, password);
+                }}
               />
             ))
           : undefined}

@@ -3,9 +3,12 @@ import "../../stylesheets/roomComponents/VotingPanel.css";
 import { Context } from "../../context/Context";
 
 import { BiLike, BiSolidLike, BiDislike, BiSolidDislike } from "react-icons/bi";
+
 import { useEffect, useState, useContext } from "react";
 
-const Word = ({ word, nickname }) => {
+// Word Panel
+
+const Word = ({ word, nickname, approveAnswer_ }) => {
   const { c_socket } = useContext(Context);
 
   const [wordLiked, setWordLiked] = useState(false);
@@ -19,6 +22,10 @@ const Word = ({ word, nickname }) => {
       setWordLiked(true);
       setWordDisliked(false);
 
+      if (!wordLiked && !wordDisliked) {
+        approveAnswer_();
+      }
+
       c_socket.emit("approveAnswer", {
         word: word,
         player: nickname,
@@ -30,6 +37,10 @@ const Word = ({ word, nickname }) => {
     if (!wordDisliked) {
       setWordDisliked(true);
       setWordLiked(false);
+
+      if (!wordLiked && !wordDisliked) {
+        approveAnswer_();
+      }
 
       c_socket.emit("disapproveAnswer", {
         word: word,
@@ -74,6 +85,13 @@ const Word = ({ word, nickname }) => {
         }, 1000);
       }
     });
+
+    c_socket.on("endGame", () => {
+      setWordLiked(false);
+      setWordDisliked(false);
+      setLikeBy("");
+      setWord_(null);
+    });
   }, []);
 
   return (
@@ -113,8 +131,33 @@ const Word = ({ word, nickname }) => {
   );
 };
 
-const VotingPanel = ({ words, categories, nickname }) => {
+// Voting panel
+
+const VotingPanel = ({ words, categories, nickname, roomData }) => {
   const [orderedCategories, setOrderedCategories] = useState([]);
+
+  const [allWordsWithoutMe, setAllWordsWithoutMe] = useState(
+    words.filter((current) => current.origin != nickname)
+  );
+  const [votesCount, setVotesCount] = useState(0);
+
+  const { c_socket } = useContext(Context);
+
+  const approveAnswer = () => {
+    setVotesCount(votesCount + 1);
+  };
+
+  const showWinner = () => {
+    //Se envía como word la primera palabra para que el servidor obtenga la room mediante esta
+    c_socket.emit("showWinner", { word: allWordsWithoutMe[0] });
+  };
+
+  useEffect(() => {
+    c_socket.on("endGame", () => {
+      setOrderedCategories([]);
+      setVotesCount(0);
+    });
+  }, []);
 
   useEffect(() => {
     const categories_ = categories.map((obj) => {
@@ -176,22 +219,42 @@ const VotingPanel = ({ words, categories, nickname }) => {
     }
   }, []);
 
+  useEffect(() => {
+    if (votesCount === allWordsWithoutMe.length) {
+      //Se envía como word la primera palabra para que el servidor obtenga la room mediante esta
+      c_socket.emit("readyPlayer", {
+        player: nickname,
+        word: allWordsWithoutMe[0],
+      });
+    }
+  }, [votesCount]);
+
   return (
     <div className="voting-panel">
       <h1>Time to vote!</h1>
-      {orderedCategories.map((c) => (
-        <div className="category-panel">
-          <h3>{c[0].category}</h3>
+      {orderedCategories.map((c, index) => (
+        <div className="category-panel" key={index}>
+          <h3>{c[0].category}:</h3>
           <div className="words-container">
             {c.map((current) => (
-              <Word key={current._id} word={current} nickname={nickname} />
+              <Word
+                key={current._id}
+                word={current}
+                nickname={nickname}
+                approveAnswer_={approveAnswer}
+              />
             ))}
           </div>
         </div>
       ))}
       <div className="confirm-feedback">
-        <p>you are ready?</p>
-        <BiLike />
+        <h2>
+          words voted: {votesCount}/{allWordsWithoutMe.length}
+        </h2>
+        {roomData.admin === nickname &&
+        votesCount === allWordsWithoutMe.length ? (
+          <button onClick={showWinner}>show winner</button>
+        ) : undefined}
       </div>
     </div>
   );

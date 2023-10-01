@@ -1,67 +1,107 @@
-
 .categories-panel {
-    width: 90%;
-    margin-top: 10px;
+  width: 90%;
+  margin-top: 10px;
 
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+}
+.categories-panel h3 {
+  margin-bottom: 0;
+}
+
+.categories-panel form {
+  width: 100%;
+  height: auto;
+  margin-top: 0;
+  padding: 20px 0 20px 0;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: row;
+}
+
+.categories-panel input {
+  width: 30%;
+  height: 25px;
+  padding: 0 10px 0 10px;
+
+  border: 1px solid black;
+  border-radius: 20px;
+}
+.categories-panel form div {
+  width: 180px;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.categories-panel button {
+  width: 120px;
+  height: 25px;
+  margin: 0;
+  margin-left: 10px;
+
+  border: 1px solid black;
+  border-radius: 20px;
+}
+
+.premade-categories-div {
+  width: 100%;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+}
+.premade-categories-div h3 {
+  color: rgba(0, 0, 0, 0.5);
+}
+.premade-categories-div div {
+  width: 100%;
+  margin-bottom: 10px;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.premade-categories-div p {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  width: 150px;
+  height: 40px;
+  margin: 5px;
+  padding: 0 10px 0 10px;
+
+  border: solid black 2px;
+  border-radius: 10px;
+  box-shadow: -2px 3px 1px black;
+  background-color: var(--color-2);
+  cursor: pointer;
+  font-weight: bold;
+}
+.premade-categories-div p:hover {
+  background-color: var(--color-2-hover);
+}
+
+@media only screen and (max-width: 800px) {
+  .categories-panel form {
     display: flex;
     justify-content: center;
     align-items: center;
     flex-direction: column;
-}
-.categories-panel h3 {
-    margin-bottom: 0;
-}
-
-.categories-panel form {
-    width: 100%;
-    height: auto;
-    margin-top: 0;
-    padding: 20px 0 20px 0;
-
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    flex-direction: row;
-}
-
-.categories-panel input {
-    width: 30%;
-    height: 25px;
-    padding: 0 10px 0 10px;
-
-    border: 1px solid black;
-    border-radius: 20px;
-}
-.categories-panel form div {
-    width: 180px;
-
-    display: flex;
-    justify-content: center;
-    align-items: center;
-
-}
-.categories-panel button {
-    width: 120px;
-    height: 25px;
-    margin: 0;
-    margin-left: 10px;
-
-    border: 1px solid black;
-    border-radius: 20px;
-}
-
-@media only screen and (max-width: 720px) {
-    .categories-panel form {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        flex-direction: column;
-    }
-    .categories-panel input, .categories-panel button {
-        width: 80%;
-    }
-    .categories-panel button {
-        width: 80%;
-        margin-top: 5px;
-    }
   }
+  .categories-panel input,
+  .categories-panel button {
+    width: 80%;
+  }
+  .categories-panel button {
+    width: 80%;
+    margin-top: 5px;
+  }
+}
